@@ -85,8 +85,15 @@ document references like MMO's, doc of record
   bind-references Rand rand --cited-book='Rand 1888' --printed=46-55
   --source-lane=rand --apply --details=../watson/rand-binder-eval-v2.md
   --review-html=../resources/rand-binder-review.html (idempotent
-  top-up; --report= is now the FINDINGS fragment channel).  NO full
-  run until dz says.  Dev transforms MUST use --preserve-foreign now
+  top-up; --report= is now the FINDINGS fragment channel).
+- FULL RUN state (2026-07-27): dz started then PAUSED it at p.75 -
+  8,462 refs landed (pages 1-75 minus p.24); he will run the
+  remainder himself later (bind-references --printed=1-286 WITHOUT
+  --cached-only resumes free through cache).  The migration's step 16
+  is CACHED-ONLY by default (no LLM, no credential - lands whatever
+  the shared derived store holds, skips the rest); Sonnet A/B
+  rejected Sonnet (4/20 page failures + dropped chunks;
+  watson/rand-binder-model-ab.md).  Dev transforms MUST use --preserve-foreign now
   (refs are foreign facts; proven: gen 8 preserved all 1,062).
 - Migration integration (2026-07-27): importWordWikiV1Db.sh steps
   14-16/19 = rand import+transform, printed pages (Rand+Clark),

@@ -44,7 +44,7 @@ import { copyRefBoxToNewGroup, copyRefBoxToExistingGroup,
 import * as entryMeta from './render-entry-meta.ts';
 import { updateBoundingBox, type BoundingBox } from './scanned-document.ts';
 import { asyncRenderToStringViaLinkeDOM } from '../liminal/markup.ts';
-import { extractStage, type ExtractConfig, type ExtractStage } from '../liminal/extract.ts';
+import { extractStage, extractStageCached, type ExtractConfig, type ExtractStage } from '../liminal/extract.ts';
 import { containedImageSource } from './transcribe.ts';
 
 export const PROMPT_VERSION_BIND = 3;   // v2: english + source_spelling keys
@@ -302,12 +302,20 @@ export function bindPrompt(input: BinderPageInput, bookTitle: string): string {
  *  nothing else does. */
 export async function bindPageViaLlm(cfg: ExtractConfig, input: BinderPageInput,
                                      bookTitle: string,
-                                     model: string = BIND_MODEL): Promise<BinderExtraction> {
+                                     model: string = BIND_MODEL,
+                                     opts: {cachedOnly?: boolean} = {})
+        : Promise<BinderExtraction|undefined> {
     const stage: ExtractStage = {
         name: 'bind', model, promptVersion: PROMPT_VERSION_BIND,
         imageBox: BIND_IMAGE_BOX, schema: BINDER_SCHEMA,
         prompt: (i: unknown) => bindPrompt(i as BinderPageInput, bookTitle),
     };
+    // CACHED-ONLY (dz): land what the derived store already holds, skip the
+    // rest - re-migrations on any container get the extracted pages at zero
+    // LLM spend and with NO credential.
+    if(opts.cachedOnly &&
+       !await extractStageCached(cfg, input.image_ref, 0, stage, input))
+        return undefined;
     const raw = await extractStage(cfg, input.image_ref, 0, stage, input) as BinderExtraction;
     return {bindings: (raw.bindings ?? []).map(b => ({
                 ...b, box_ids: b.box_ids ?? [],
@@ -447,8 +455,9 @@ export interface BindPagesOptions {
     sourceLane?: string;             // the book's own-orthography variant lane
                                      //   (rand: 'rand') - fills source_spelling
     // Injectable extractor (tests bind without an LLM; the CLI passes the
-    // real memoized stage).
-    extract: (input: BinderPageInput) => Promise<BinderExtraction>;
+    // real memoized stage).  `undefined` = not cached (cached-only mode
+    // skips the page).
+    extract: (input: BinderPageInput) => Promise<BinderExtraction|undefined>;
     log?: (m: string) => void;
 }
 
@@ -469,6 +478,7 @@ export interface PageBindReport {
     noScanPage?: boolean;
     failed?: string;                 // the extraction failed (API/validation) -
                                      //   the page is retryable (nothing cached)
+    skippedUncached?: boolean;       // cached-only mode: no extraction yet
 }
 
 export async function bindPages(ww: WordWiki, opts: BindPagesOptions)
@@ -511,12 +521,17 @@ export async function bindPages(ww: WordWiki, opts: BindPagesOptions)
         // (transient API error, schema misfire) reports and moves on -
         // nothing caches on failure, so a re-run retries exactly the
         // failed pages at no extra cost for the rest.
-        let extraction: BinderExtraction;
+        let extraction: BinderExtraction|undefined;
         try {
             extraction = await opts.extract(input);
         } catch(e) {
             r.failed = e instanceof Error ? e.message : String(e);
             log(`p.${printed}: EXTRACTION FAILED - ${r.failed}`);
+            reports.push(r);
+            continue;
+        }
+        if(extraction === undefined) {
+            r.skippedUncached = true;
             reports.push(r);
             continue;
         }
@@ -740,6 +755,7 @@ export function bindReportMarkdown(opts: {book: string, dictionary: string,
             (r.noScanPage ? ' - NO SCAN PAGE CARRIES THIS NUMBER' :
              ` (${r.candidates} candidates, ${r.boxes} boxes)`));
         if(r.failed) lines.push(`- EXTRACTION FAILED (retryable): ${r.failed}`);
+        if(r.skippedUncached) lines.push(`- skipped (no cached extraction - cached-only mode)`);
         for(const b of r.bound)
             lines.push(`- **${b.headword}** (${b.entry_id}):`,
                        ...b.boxTexts.map(t => `    - ${t}`));

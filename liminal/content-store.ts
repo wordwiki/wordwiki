@@ -153,6 +153,19 @@ contentStorePlay();
 /**
  *
  */
+/** Is the derivation for `closure` already in the store?  The same key
+ *  computation as getDerived, no side effects - lets a caller run in
+ *  CACHED-ONLY mode (use what exists, never compute). */
+export async function hasDerived(contentStorePath: string,
+                                 closure: any[],
+                                 extension: string): Promise<boolean> {
+    const contentStoreParent = posix.dirname(contentStorePath);
+    const contentStore = posix.basename(contentStorePath);
+    const hash = await digestString(JSON.stringify(closure, undefined, '  '));
+    const outputContentId = formatContentId({contentStore, hash, extension});
+    return await fs.exists(posix.join(contentStoreParent, outputContentId));
+}
+
 export async function getDerived(contentStorePath: string,
                           fns: {[fnName: string]: Function},
                           closure: any[],

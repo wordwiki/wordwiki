@@ -907,7 +907,7 @@ export async function cliMain(args: string[]): Promise<void> {
         // the derived store, so re-runs and --apply after a dry run are
         // nearly free.
         //   ./wordwiki.sh bind-references Rand rand --cited-book='Rand 1888'
-        //                 --printed=1-10 --source-lane=rand [--apply]
+        //                 --printed=1-10 --source-lane=rand [--apply] [--cached-only]
         //                 [--min-confidence=medium] [--model=...] [--report=bind.md]
         //                 [--review-html=resources/rand-binder-review.html]
         case 'bind-references': {
@@ -932,10 +932,13 @@ export async function cliMain(args: string[]): Promise<void> {
                     return [Number(part)];
                 });
                 const apply = args.includes('--apply');
+                const cachedOnly = args.includes('--cached-only');
                 const minConfidence = (flag('min-confidence') ?? 'medium') as 'high'|'medium'|'low';
 
                 const llm = loadLlm('wordwiki');
-                if(!llm.available)
+                // Cached-only mode never calls the LLM - it lands the pages
+                // the derived store already holds (no credential needed).
+                if(!llm.available && !cachedOnly)
                     panic('wordwiki-anthropic-credential.json missing/invalid - LLM unavailable');
                 const usage = {inputTokens: 0, outputTokens: 0, calls: 0};
                 const cfg: ExtractConfig = {
@@ -951,7 +954,8 @@ export async function cliMain(args: string[]): Promise<void> {
                 const reports = await referenceBinder.bindPages(ww, {
                     book, dictionary, citedBook, printedPages, apply, minConfidence,
                     sourceLane: flag('source-lane'),
-                    extract: (input) => referenceBinder.bindPageViaLlm(cfg, input, doc.title, model),
+                    extract: (input) => referenceBinder.bindPageViaLlm(cfg, input, doc.title,
+                                                                       model, {cachedOnly}),
                 });
                 const report = referenceBinder.bindReportMarkdown(
                     {book, dictionary, citedBook, apply}, reports);
@@ -969,7 +973,9 @@ export async function cliMain(args: string[]): Promise<void> {
                     reports.reduce((n, r) => n + f(r), 0);
                 step.log(`pages ${printedPages.length}; candidates ${tot(r => r.candidates)}; ` +
                          `${apply ? 'bound' : 'proposed'} ${tot(r => r.bound.length)}; ` +
-                         `already-referenced ${tot(r => r.alreadyReferenced.length)}`);
+                         `already-referenced ${tot(r => r.alreadyReferenced.length)}` +
+                         (cachedOnly ? `; skipped-uncached ${tot(r => r.skippedUncached ? 1 : 0)} ` +
+                                       `(cached-only mode)` : ''));
                 step.log(`LLM: ${usage.calls} call(s), ${usage.inputTokens} in / ` +
                          `${usage.outputTokens} out tokens (cache hits are free)`);
                 const worklist = step.report.section('Binder worklist');

@@ -15,7 +15,7 @@
 // uses this directly as a read-through derived attribute; the flow (jobs, review,
 // filing) is Layer 2 and lives in the app.
 import * as posix from "https://deno.land/std@0.195.0/path/posix.ts";
-import { getDerived } from "./content-store.ts";
+import { getDerived, hasDerived } from "./content-store.ts";
 import { Llm, LlmUsage } from "./llm.ts";
 
 // ---------------------------------------------------------------------------------
@@ -70,10 +70,27 @@ export const DEFAULT_IMAGE_BOX = 1600;
  * photo value by the caller and passed explicitly (it changes the pixels the model
  * sees, so it's in the key too).  Returns the parsed, schema-validated JSON.
  */
+async function stageClosure(photoPath: string, rotate: number, stage: ExtractStage,
+                            input: unknown): Promise<any[]> {
+    const box = stage.imageBox || DEFAULT_IMAGE_BOX;
+    const inputHash = await digestString(JSON.stringify(input ?? null));
+    return ['extract', photoPath, rotate, stage.model, stage.promptVersion, box,
+            stage.name, inputHash];
+}
+
+/** Is this stage's extraction already cached?  (CACHED-ONLY consumers -
+ *  e.g. the migration pipeline's binder step - land what exists and skip
+ *  the rest, needing neither LLM credential nor spend.) */
+export async function extractStageCached(cfg: ExtractConfig, photoPath: string,
+                                         rotate: number, stage: ExtractStage,
+                                         input: unknown): Promise<boolean> {
+    return await hasDerived(`${cfg.derivedDir}/extractions`,
+                            await stageClosure(photoPath, rotate, stage, input), 'json');
+}
+
 export async function extractStage(cfg: ExtractConfig, photoPath: string, rotate: number,
                                    stage: ExtractStage, input: unknown): Promise<unknown> {
     const box = stage.imageBox || DEFAULT_IMAGE_BOX;
-    const inputHash = await digestString(JSON.stringify(input ?? null));
     const contentId = await getDerived(
         `${cfg.derivedDir}/extractions`,
         { extract: async (_target: string) => {
@@ -86,7 +103,7 @@ export async function extractStage(cfg: ExtractConfig, photoPath: string, rotate
             // A string return is written to the .json file by getDerived.
             return JSON.stringify(validateExtraction(stage.schema, raw));
         }},
-        ['extract', photoPath, rotate, stage.model, stage.promptVersion, box, stage.name, inputHash],
+        await stageClosure(photoPath, rotate, stage, input),
         'json');
     return JSON.parse(await readDerived(cfg.derivedDir, contentId));
 }

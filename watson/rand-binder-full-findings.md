@@ -1,0 +1,275 @@
+# Bind Rand 1888 pages -> 'rand'
+
+> **⚠ Point-in-time report — generated 2026-07-27T12:53:42.061Z from `/home/dziegler/projects/wordwiki/mmo/database/db.db [db_purpose: dev]`.**
+> This is a record of that moment, not a live view; re-run the generator for current data.
+
+**258 finding(s)** across 2 section(s):
+
+- Log: 0 finding(s)
+- Binder worklist: 258 finding(s)
+
+## Log
+
+- pages 286; candidates 32050; bound 0; already-referenced 8462; skipped-uncached 211 (cached-only mode)
+- LLM: 0 call(s), 0 in / 0 out tokens (cache hits are free)
+
+## Binder worklist
+
+- **p.1: below threshold (low) - -igtug (3559342751680312)**
+- **p.1: below threshold (low) - e'g (6475316586242453)**
+- **p.1: below threshold (low) - gisaltimg (8052522358526833)**
+- **p.1: unclaimed region - 'To abate, v. tr. Ajitkeladoo' (box 146880) is only partially claimed**
+- **p.2: unmatched - ulite'taqn (5167215063413273)**
+- **p.2: unmatched - gistewategemgewei (6090209270561081)**
+- **p.2: below threshold (low) - (entry 2822952760649430) (2822952760649430)**
+- **p.2: below threshold (low) - (entry 2822952750649430) (2822952750649430)**
+- **p.2: below threshold (low) - (entry 2822952760649431) (2822952760649431)**
+- **p.2: below threshold (low) - maqmigew (8270625919994389)**
+- **p.2: unclaimed region - Right column 'Above-ground' underground note lämkumoo'k inline in box 146943**
+- **p.3: unmatched - paqapnigeg (420534329357894)**
+- **p.3: unmatched - utu (1241501145756324)**
+- **p.3: unmatched - toqjuamgewei (1855189251979741)**
+- **p.3: unmatched - naqatimgewe'mesu (1880806500103687)**
+- **p.3: unmatched - gaqwasimgewei (2026544528721786)**
+- **p.3: unmatched - utunaqatimgewe'wmesu (4169065869617372)**
+- **p.3: unmatched - Se'suguli (5974663888108359)**
+- **p.3: unmatched - maqtawisgunet (8842710482901445)**
+- **p.3: below threshold (low) - ewplategemgewei (8012866627704592)**
+- **p.3: unclaimed region - running head 'ENGLISH-MICMAC DICTIONARY.' and page number 3**
+- **p.4: below threshold (low) - oqsgitaq (1044106045385788)**
+- **p.4: below threshold (low) - jagle'img (1755706755610912)**
+- **p.4: below threshold (low) - tle' (3061143547979444)**
+- **p.4: below threshold (low) - aqsgitaq (4080107498188812)**
+- **p.4: below threshold (low) - uligis'taqn (4149115645412128)**
+- **p.4: below threshold (low) - anguaqata's'g (6289130643045495)**
+- **p.4: below threshold (low) - weli- (6852075445303314)**
+- **p.4: below threshold (low) - angua'tas'g (7165368554708910)**
+- **p.4: below threshold (low) - ma' (7628326320785636)**
+- **p.4: below threshold (low) - uligise'taqan (7803117917782911)**
+- **p.4: below threshold (low) - anakua'tasɨk (7955029968218095)**
+- **p.4: below threshold (low) - st`ge' (8227602692381003)**
+- **p.4: unclaimed region - running head 'ENGLISH-MICMAC DICTIONARY.' and page number '4'**
+- **p.5: unmatched - getlewe'uaqnig (413174063002241)**
+- **p.5: unmatched - getlewe'uaqnig (1041679043435098)**
+- **p.5: unmatched - etlewistmgewei (526989524779094)**
+- **p.5: unmatched - getlewei (3676095734076441)**
+- **p.5: unmatched - getlewe'tla'teget (6461755905956586)**
+- **p.5: unmatched - getlewe'igtug (6580084448857703)**
+- **p.5: unmatched - wisunuaqn (968867636499781)**
+- **p.5: unmatched - nestue'g (794576762858420)**
+- **p.5: unmatched - uggwe'uti (2475061326274245)**
+- **p.5: unmatched - maja'toq (3170895057763422)**
+- **p.5: unmatched - masaqa'toq (3789525003361914)**
+- **p.5: unmatched - sa'qawei (5014480055895722)**
+- **p.5: unmatched - wigsnugowaqn (5442346023743485)**
+- **p.5: unmatched - elm'testusnig (5838263104309236)**
+- **p.5: unmatched - metue'g_gsnugowaqn (7320027359874197)**
+- **p.5: unmatched - taqmsga'toq (4997402135600778)**
+- **p.5: unmatched - taqm'sga'toq (8346268161737639)**
+- **p.5: unmatched - etlintawaqa'toq (3466197319089089)**
+- **p.5: unclaimed region - 'To be accustomed' Note paragraph (boxes 147212,147214,147216) - explanatory note, no candidate**
+- **p.5: unclaimed region - Note continuation lines 147219,147223 partially**
+- **p.5: unclaimed region - 5432538125457241 acre length is on boxes 147226**
+- **p.6: below threshold (low) - ta'puewei (4300714048839121)**
+- **p.6: below threshold (low) - goqwei (6503384807132622)**
+- **p.6: unclaimed region - Right column header 'ENGLISH-MICMAC DICTIONARY.' (running head)**
+- **p.6: unclaimed region - Left column page number '6'**
+- **p.6: unclaimed region - Adequate, Tabeâk' (147269) - no clear candidate matched**
+- **p.6: unclaimed region - Adhesive continuation okskijookooemkawa (147287) shared**
+- **p.6: unclaimed region - Adjutor line 147348 - Nooje-abogunumooal, no dedicated candidate matched cleanly**
+- **p.7: below threshold (low) - (entry 431133826204449) (431133826204449)**
+- **p.7: below threshold (low) - (entry 4414420867427182) (4414420867427182)**
+- **p.8: unmatched - ansale'wit (423284921916198)**
+- **p.8: unmatched - i' (3789119759442891)**
+- **p.8: below threshold (low) - ansale'wit (423284921916198)**
+- **p.8: below threshold (low) - (entry 3390784565565791) (3390784565565791)**
+- **p.8: below threshold (low) - (entry 3390784565365791) (3390784565365791)**
+- **p.8: below threshold (low) - (entry 3390784565365790) (3390784565365790)**
+- **p.8: below threshold (low) - welmaje'g (3637904604360302)**
+- **p.8: below threshold (low) - i' (3789119759442891)**
+- **p.8: unclaimed region - N.B. note lines about prefix peme (boxes 147470-147478) are explanatory text under 'To advance'**
+- **p.9: unmatched - gamlamit (7203802524484818)**
+- **p.9: below threshold (low) - gamlamit (7203802524484818)**
+- **p.9: unclaimed region - Affabrous, Welekesedasik (left col first entry - no candidate)**
+- **p.9: unclaimed region - Affair, Loogowokun; Mtumodakun: nadoo kogooa (no candidate)**
+- **p.9: unclaimed region - Affiction/Affliction final line enoogowokun wenmajaoookun**
+- **p.10: unmatched - wejgwapniaq (7714738151617696)**
+- **p.10: unclaimed region - Ago, adv. Saak / Long ago, kes saak (boxes 147636, 147638) - no candidate**
+- **p.10: unclaimed region - Agoing, Pemeemk; elookwek (box 147640) - elookwek entry 3585059089171119 cites multiple pages**
+- **p.11: unclaimed region - Alienable line 147723 already claimed**
+- **p.11: unclaimed region - 'msut Tan tasugul left column Alacrity area covered**
+- **p.12: below threshold (low) - lugowaqn (8226410915948197)**
+- **p.12: unclaimed region - To stand alone (by himself) - Medadoodum (boxes 147862,147864) has no dedicated candidate matched**
+- **p.13: unclaimed region - Amends, Abankudoo-owä' (box 147964) - no candidate entry**
+- **p.14: unmatched - alsusuti (5929202770554521)**
+- **p.14: below threshold (low) - (entry 1973) (1973)**
+- **p.14: below threshold (low) - alsusuti (5929202770554521)**
+- **p.15: unclaimed region - Angel, Ansäläwit (box 148108) - no candidate**
+- **p.15: unclaimed region - Annuity, Taseboonkugäwal abankudooowa' (box 148105) - no candidate**
+- **p.15: unclaimed region - To Annunciate, Agunoodum (box 148117) - no candidate**
+- **p.15: unclaimed region - Annunciation Day, (Mar. 25th.) (box 148119) - no candidate**
+- **p.17: below threshold (low) - umijisin (3020638722576140)**
+- **p.17: unclaimed region - Apartment, Poktuskaasik (box 148237) - no candidate**
+- **p.17: unclaimed region - Appertainment, Ootapsoon; Ootalegem; Tan kogooa na tula (boxes 148312,148314) - no candidate**
+- **p.18: unclaimed region - Appropriate adj line (148391) - welpit/weltek variants may correspond to entry 2755221364874887 which is also under Apposite**
+- **p.19: below threshold (low) - samugwan (8056096603427887)**
+- **p.19: below threshold (low) - e'k (5754663673429100)**
+- **p.19: below threshold (low) - e'g (6475316586242453)**
+- **p.19: below threshold (low) - tle' (4470034183614081)**
+- **p.19: unclaimed region - Appurtenance entry (boxes 148430, 148432) has no candidate**
+- **p.19: unclaimed region - Aptitude 'Nadada'soode continuation (148450) belongs to aptitude entries**
+- **p.20: unmatched - ewiotoq (487873255541985)**
+- **p.20: unmatched - awiew (4853165362032551)**
+- **p.20: unmatched - matawa'sit (8776635777110270)**
+- **p.20: unmatched - apje'jk (947780625732078)**
+- **p.20: unmatched - apje'jg (6148317576262948)**
+- **p.20: unmatched - alsusit (4206927141976088)**
+- **p.20: below threshold (low) - awiew (4853165362032551)**
+- **p.20: unclaimed region - around: 'To turn it around' present; entries for owёōdoo (place it round) and mădawaase (come round) not on visible lines**
+- **p.20: unclaimed region - apchāāch multi-page composite entries only partly on this page (armistice apchāāchk)**
+- **p.20: unclaimed region - alsoosooltijik composite aristocracy entry**
+- **p.21: below threshold (low) - ntlugwe'g (7174005229382067)**
+- **p.21: model returned bad box ids for entry 7170005229382067**
+- **p.21: unclaimed region - Left column top: guide-word italic lines 'To come round back to the same place from which I started, Madawaase.' and 'To place it round, Oweodoo.' (boxes 148598,148600,148602) belong to no candidate on this page**
+- **p.21: unclaimed region - Left column 'Arrear ... Tan noodeiu ahkus' partial line 148640 also part of arrear entries**
+- **p.21: unclaimed region - Left column 'Arrearage ... Tan eskweak mowkedumugawa iktook moo abankudasenook' continuation 148646**
+- **p.22: unmatched - elatumg (2248501280570469)**
+- **p.22: unmatched - poqtmgatm'gewei (4317927582580379)**
+- **p.22: unmatched - else'g (4995205896511336)**
+- **p.22: unmatched - aqate'g (8983380449139973)**
+- **p.22: unclaimed region - 'To asperse' second Mi'kmaq equivalent uksuboogwadakunimsimk (box 148764) belongs to entry present but not a separate candidate**
+- **p.23: unclaimed region - Assiduity 'To be assiduous' header line included; all body lines appear claimed**
+- **p.24: unmatched - petgitg (3762568277756325)**
+- **p.24: unmatched - enma'latl (4044442282727343)**
+- **p.24: unmatched - enmateget (4893849944732874)**
+- **p.24: unmatched - enmigimatl (8112243209592832)**
+- **p.24: unmatched - enm'getg (8215191257731074)**
+- **p.24: unmatched - enma'toq (8991862468781016)**
+- **p.24: below threshold (low) - (entry 3311164323506061) (3311164323506061)**
+- **p.24: unclaimed region - 'To fall across' (box 148945) has no candidate entry**
+- **p.24: unclaimed region - 'To partition it across' (box 148947) has no candidate entry**
+- **p.25: below threshold (low) - ms'tua'toq (7765303161741285)**
+- **p.25: unclaimed region - To be attired, ekwtei (149012 - attest attract) already covered**
+- **p.26: unclaimed region - Aviary line 149077 also contains 'August' guide - actually fine**
+- **p.26: unclaimed region - Right column 'August' box 149073**
+- **p.26: unclaimed region - 'Auk (the Great)' box 149075 - no candidate matched**
+- **p.30: unclaimed region - Line 149449 'White birch bark is called' is a heading with no candidate entry**
+- **p.31: unmatched - nenga'masit (1468046805342430)**
+- **p.31: unmatched - najigismit (2843066939177992)**
+- **p.31: unmatched - maqtawapsgeg (4774585347280946)**
+- **p.31: unclaimed region - Note paragraph under 'To be' (boxes 149522, 149524, 149527, 149528) - explanatory note, no headword**
+- **p.32: unmatched - enga'masit (1149429969809608)**
+- **p.32: unmatched - nenga'masit (8422993428042776)**
+- **p.32: below threshold (low) - enga'masit (1149429969809608)**
+- **p.32: below threshold (low) - nenga'masit (8422993428042776)**
+- **p.32: unclaimed region - A bear, Mooin (box 149591) - simple entry not in candidate list**
+- **p.33: below threshold (low) - paqwalusg'tesguatl (1831939986678651)**
+- **p.33: below threshold (low) - gaqipaqwalusg'tesguatl (8209150539705034)**
+- **p.33: unclaimed region - Note text continuation lines within 'To become' entry (149676, 149678) - part of the become note**
+- **p.33: unclaimed region - Before adv. continuation 'Meltamu' (149685)**
+- **p.35: below threshold (low) - (entry 1871) (1871)**
+- **p.35: below threshold (low) - (entry 6858) (6858)**
+- **p.35: unclaimed region - bespatter line (Bākwŭlooskŭdĕskâk') boxes 149871,149873 not represented by a candidate entry**
+- **p.37: unmatched - maqtawiasun (4634631662822452)**
+- **p.37: unclaimed region - Right column: 'A long stretch of black sand' (boxes 150083,150085) has no candidate entry**
+- **p.38: unclaimed region - A blemish, achkunaadoo (box 150182) - 'To blemish' matched but 'A blemish' entry not in candidates**
+- **p.39: unmatched - ejkla'latl (5060271674286782)**
+- **p.41: unmatched - nurapi'j (5037791811133640)**
+- **p.41: unmatched - utapi'jit (6983688528419973)**
+- **p.41: unmatched - utapi'jit (7882214044533195)**
+- **p.41: unmatched - apia'q (7005962500769402)**
+- **p.41: unmatched - nemjinoqwa'toq (5559928097316752)**
+- **p.41: unclaimed region - Bow, (bo), Abe - 'Abe' head equivalent (rainbow entry claims same line)**
+- **p.41: unclaimed region - small bow / own a small bow / armed with a bow / put across entries not visibly printed on this page**
+- **p.42: unmatched - ginamugwa'sit (8635666918509661)**
+- **p.42: model returned bad box ids for entry 8635666718963273**
+- **p.42: unclaimed region - A crossbow, Päskãwodeogumäbe (box 150469)**
+- **p.42: unclaimed region - A small bow, Nootäbeech (box 150471)**
+- **p.42: unclaimed region - To own a small bow, Ootabeeje (box 150473)**
+- **p.42: unclaimed region - To be armed with a bow, Abeaam (box 150475)**
+- **p.42: unclaimed region - Bowsprit, Ababeäjootkw (box 150491)**
+- **p.42: unclaimed region - To brace continuation Wenäkpelum already covered; second sword brandish**
+- **p.42: unclaimed region - To brandish, Yalega' second**
+- **p.43: unclaimed region - Note paragraph (right column) about Mohawk coincidence - boxes 150563,150565,150567,150569,150571**
+- **p.43: unclaimed region - To have a broken back, Temawigunae - box 150573 (no candidate)**
+- **p.43: unclaimed region - N B.-This word also means kelp - box 150639**
+- **p.44: unmatched - gesgigwamgeg (1091998460643929)**
+- **p.44: unmatched - gesgapsgeg (2514516195436469)**
+- **p.44: unmatched - gesgaqamigeg (2940293587995949)**
+- **p.44: unmatched - gesgapugsit (3002336889304568)**
+- **p.44: unmatched - gesgulug (3405834251604758)**
+- **p.44: unmatched - gesgasg'g (4313421137308283)**
+- **p.44: unmatched - gesgulg'g (5180986512404604)**
+- **p.44: unmatched - gesg'teg (6104598511103570)**
+- **p.44: unmatched - gesgamgeg (7635152392874073)**
+- **p.44: unmatched - gesgoqomeg'g (8848465742120650)**
+- **p.45: unmatched - temawigne'g (7832826319533560)**
+- **p.45: unclaimed region - Left column top: 'The road is broad' ... through 'The sand-bar is broad' and N.B. note (boxes 150736,150738,150740,150742,150744,150746,150748,150750,150752,150754,150756,150758,150760,150762,150764,150766,150768) - broad body-part examples, no candidate entries**
+- **p.46: unclaimed region - buffoonery Mi'kmaq equivalent on line 150889 (continuation beyond box)**
+- **p.47: unclaimed region - A burthen, See Burden (box 150919) - cross-reference, no Mi'kmaq record**
+- **p.48: unmatched - egiljet (6546722154297064)**
+- **p.48: below threshold (low) - egiljet (6546722154297064)**
+- **p.49: unclaimed region - Canoe: Its different parts, etc. introductory paragraph (boxes 151088, 151090, 151092, 151094) - header/note, not a dictionary entry**
+- **p.49: unclaimed region - Calvary (box 151099) - headword with no Mi'kmaq equivalent and no candidate entry**
+- **p.50: below threshold (low) - saqsigwet (1219363452265211)**
+- **p.50: unclaimed region - eliskoo'dĕsŭm explanatory note lines 151184-151196 (secondary sense discussion)**
+- **p.51: unmatched - menaqajewi'toq (5463147122827898)**
+- **p.51: below threshold (low) - menaqajewi'toq (5463147122827898)**
+- **p.51: unclaimed region - To paddle, Cheema line (box 151284) — matched**
+- **p.51: unclaimed region - Care line right column top continuation**
+- **p.52: below threshold (low) - (entry 7417119035796497) (7417119035796497)**
+- **p.52: unclaimed region - Car, Booktaoolkw' makumegowa' (box 151372) - no candidate for 'car'**
+- **p.54: unclaimed region - Left col line 'Boonâ—as a prefix to any verb, signifies' (box 151540) and 'To cease—as:' (box 151542) are explanatory notes under To cease, not separate candidate entries**
+- **p.54: unclaimed region - Centesimal entry (box 151618) has no candidate**
+- **p.55: unclaimed region - Chapel, Alasoodumögwom (box 151650) - no candidate entry**
+- **p.55: unclaimed region - Coal black, Mowimkudawãe; Booksetäwimkudawãe (boxes 151686,151688) - no candidate entry**
+- **p.56: unmatched - talam'g (4399014411941577)**
+- **p.56: unmatched - te'l'g (6773975090830597)**
+- **p.56: unclaimed region - What do you charge for it? Taalumun (box 151712) - candidate 4399014411941577 and 6773975090830587 both cite it but I list them unmatched only if not; actually present**
+- **p.56: unclaimed region - I charge so much for it Taalum (box 151714)**
+- **p.60: unmatched - gepijoqtesg'g (2781291050027010)**
+- **p.60: below threshold (low) - (entry 2110000000000000) (2110000000000000)**
+- **p.61: unmatched - mawimg'tewe'g (160870734438142)**
+- **p.61: unmatched - pugsetewimg'tewe'g (2025177710206447)**
+- **p.61: unclaimed region - Coherent entry (box 152236,152238) has candidates only for cohere/coherent group, no dedicated 'coherent' Okskedei record**
+- **p.62: unmatched - etlitg'pegiet (849201198869754)**
+- **p.62: unmatched - etlitg'pegiaq (2103492572985309)**
+- **p.62: unmatched - tetpegiet (5056270317778890)**
+- **p.62: unmatched - tetpegiaq (8741387362002053)**
+- **p.62: unclaimed region - 'is cooling' entries with source_spelling etlitkubegeet/etlitkubegeak/tetpegeet/tetpegeak appear to be on a different page (not printed here)**
+- **p.63: unclaimed region - To come out of a ship continuation etc Natkaase already claimed**
+- **p.63: unclaimed region - command continuation kimk Alsoomk Alsoose**
+- **p.64: unmatched - mawilite'watl (4197849456172365)**
+- **p.65: unmatched - nenga'latl (6254782696588138)**
+- **p.65: below threshold (low) - (entry 6254782696588123) (6254782696588123)**
+- **p.65: unclaimed region - Conciliation, Abiksiktädimkãwa' (box 152582) has no candidate entry**
+- **p.65: unclaimed region - Concise headword Wejepoogwelaboogooegul (box 152586) partially covered**
+- **p.66: unclaimed region - Conduce, Abogunumadum (box 152649) - no candidate entry**
+- **p.67: unmatched - atlei (2334044177600798)**
+- **p.67: unmatched - atley (4601758061863913)**
+- **p.67: below threshold (low) - (entry 6076027286636235) (6076027286636235)**
+- **p.67: below threshold (low) - (entry 2784515819475404) (2784515819475404)**
+- **p.67: unclaimed region - To conserve, Ankodum (right col) — possibly matched loosely**
+- **p.67: unclaimed region - To consider, Ankedaase / Ankedäãdum**
+- **p.68: unmatched - wejgwitlewistoq (6505981483053933)**
+- **p.68: unmatched - elmntijig (6900380896353881)**
+- **p.69: unclaimed region - 'To co-operate' first equivalent Witloogoodeek' shares line 152898**
+- **p.69: unclaimed region - 'To be all correct, Tedabooãe' line 152951 has no candidate entry**
+- **p.70: below threshold (low) - uisn'g (3413813638673538)**
+- **p.70: below threshold (low) - natu_wen (5230527279775491)**
+- **p.71: below threshold (low) - elue'wit (6944091674334552)**
+- **p.71: unclaimed region - Line 153052/153054 'Country, Nadame, kadoo mogwa' ukchegunenook' - no candidate entry for 'country'**
+- **p.71: unclaimed region - 'Craggy' line (153100) also has second equivalent handled**
+- **p.71: unclaimed region - 'Cranium' fully claimed**
+- **p.72: unmatched - newtite'taqatijig (823746585948132)**
+- **p.72: unclaimed region - Cravat entry (kagistakunapesoode) and its 'To tie on my cravat' subline have no candidate entry**
+- **p.73: below threshold (low) - elege'witewi- (8779818210565147)**
+- **p.73: unclaimed region - Crop, (craw), Wiskwe. - box 153231**
+- **p.73: unclaimed region - To place it across, Takumogwaadoo - box 153251**
+- **p.73: unclaimed region - To crush him with the foot N.B. note lines - boxes 153254,153256**
+- **p.73: unclaimed region - Crutch, Aptoon - box 153262**
+- **p.73: unclaimed region - A cubit N.B. note lines - boxes 153284,153286,153288,153290**
+- **p.73: unclaimed region - To cudgel Wejematããk aptoon iktook (line already claimed)**
+- **p.73: unclaimed region - Culpable Padategãwenpoe (claimed)**
+- **p.75: unclaimed region - To dance along Pema'loogwa' - matched**
+- **p.75: unclaimed region - Danger Nsanoksoode second occurrence**

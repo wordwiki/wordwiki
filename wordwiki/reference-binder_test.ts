@@ -190,6 +190,14 @@ test("binder: input assembly, landing on the sheet, idempotence, thresholds, dry
                 assertEquals(db().all<any, any>(
                     `SELECT 1 FROM bndt WHERE ty='ref'`, {}).length, 1);
 
+                // CACHED-ONLY mode: an uncached page (extract -> undefined)
+                // is SKIPPED, never failed, and nothing is written.
+                const skipped = await binder.bindPages(ww, {...opts(true),
+                    extract: () => Promise.resolve(undefined)});
+                assertEquals(skipped[0].skippedUncached, true);
+                assertEquals(skipped[0].bound, []);
+                assertEquals(skipped[0].failed, undefined);
+
                 // The report reads like the worklist it is.
                 const md = binder.bindReportMarkdown(
                     {book: 'BND', dictionary: 'bndt', citedBook: 'Test 1888', apply: true},
