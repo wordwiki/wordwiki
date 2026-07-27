@@ -28,9 +28,19 @@
  * through toJavascriptIdentifier (the digit-initial 1d family);
  * \nam -> $prompt.
  *
- * DETERMINISM: ids are a counter in file order, timestamps a single
- * import stamp, order keys derived from seq - an identical re-import is
- * byte-identical.  Mirrors are stamped '~sfm-import'; re-import WIPES the
+ * DETERMINISM: ids are CONTENT-KEYED (dz 2026-07-26) - a record's id is
+ * a 53-bit hash of its canonical field text (+ an occurrence index for
+ * Rand's genuinely duplicate records), field ids hang off the record id
+ * by emission ordinal.  An identical re-import is byte-identical, and a
+ * NEW DROP with an inserted record moves NOTHING ELSE: unchanged records
+ * keep their ids, so downstream identity (transform-reused fact ids,
+ * references, binder cache keys, cross-dictionary links) survives
+ * re-imports; an EDITED record changes id, so human work attached to the
+ * old id orphans VISIBLY (preserve-foreign skeletons + report), never
+ * mis-attaches.  Import ids live in [2^44, 2^53) - disjoint from app
+ * counter ids and the transform's derivedId wrapper space.  Timestamps
+ * are a single import stamp, order keys derived from seq.  Mirrors are
+ * stamped '~sfm-import'; re-import WIPES the
  * assertion table and refuses if any foreign (non-importer) assertion
  * exists - edits belong in the step-2 dictionary.
  */
@@ -180,11 +190,34 @@ export interface SfmImportOpts {
     sourceName?: string;              // provenance label (the file name)
 }
 
+// --- Content-keyed ids --------------------------------------------------------
+// Import ids live in [2^44, 2^53): DISJOINT from the app's counter ids and
+// from dictionary-transform's derivedId wrapper space, so the id families
+// can never collide inside a transformed table.  53 bits (not 64): JS
+// numbers round-trip integers only to Number.MAX_SAFE_INTEGER, and these
+// ids ride JSON, routes and attr columns.
+const ID_FLOOR = 2 ** 44;
+const ID_SPAN = 2 ** 53 - ID_FLOOR;
+function fnv64(s: string): bigint {
+    let h = 0xcbf29ce484222325n;
+    for(let i = 0; i < s.length; i++) {
+        h ^= BigInt(s.charCodeAt(i));
+        h = (h * 0x100000001b3n) & 0xffffffffffffffffn;
+    }
+    return h;
+}
+/** A stable 53-bit id from content parts (FNV-1a 64 folded into the
+ *  import id space). */
+export function contentKeyId(parts: Array<string|number>): number {
+    return ID_FLOOR + Number(fnv64(parts.join('\u0000')) % BigInt(ID_SPAN));
+}
+
 export interface SfmImportResult {
     records: number;
     assertions: number;
     perMarker: Map<string, number>;
     droppedFields: number;            // fields whose marker has no relation
+    idCollisions: number;             // content-hash collisions (deterministically re-salted)
     problems: sfm.SfmProblem[];       // tree-recovery problems (lenient)
     schemaProblems: string[];
     generation: number;
@@ -239,19 +272,33 @@ export function importSfm(typText: string, dataText: string,
                                       {stopAfterCount: opts.stopAfterCount});
     const problems = sfm.applySchema(database, typ, {lenient: true});
 
-    // --- Records -> assertions.  DETERMINISTIC: counter ids in file order,
-    //     one import stamp, order keys from seq.
+    // --- Records -> assertions.  DETERMINISTIC + CONTENT-KEYED ids (see
+    //     the module doc), one import stamp, order keys from seq.
     const schema = model.Schema.parseSchemaFromCompactJson(opts.table, derived.schemaJson);
     const entryRel = schema.relationFields[0];
     const relByTag = entryRel.descendantAndSelfRelationsByTag;
     const t = timestamp.nextTime(highestTimestamp(opts.table));
-    let nextId = 1000;
+    const usedIds = new Set<number>();
+    // Cross-content hash collisions are ~1e-5 at this corpus size; resolve
+    // deterministically (same file -> same result) and count them.
+    let idCollisions = 0;
+    const claimId = (id: number): number => {
+        while(usedIds.has(id)) { idCollisions++; id = contentKeyId(['bump', id]); }
+        usedIds.add(id);
+        return id;
+    };
+    const recordOccurrence = new Map<string, number>();
     const rows: Assertion[] = [];
     const perMarker = new Map<string, number>();
     let droppedFields = 0;
 
     for(const record of database.records) {
-        const entryId = nextId++;
+        const canonical = record.fields
+            .map(f => `${f.name}\u0001${f.content ?? ''}`).join('\u0002');
+        const occ = recordOccurrence.get(canonical) ?? 0;
+        recordOccurrence.set(canonical, occ + 1);
+        const entryId = claimId(contentKeyId(['rec', canonical, occ]));
+        let fieldOrdinal = 0;
         rows.push({
             ...assertionPathToFields([[schema.tag, 0], [entryTagOf(schema), entryId]]),
             assertion_id: entryId, id: entryId, ty: entryTagOf(schema),
@@ -274,7 +321,7 @@ export function importSfm(typText: string, dataText: string,
                       parentPath: [string, number][], parentId: number): number|undefined => {
             const rel = relByTag[marker];
             if(rel === undefined) { droppedFields++; return undefined; }
-            const id = nextId++;
+            const id = claimId(contentKeyId(['fld', entryId, fieldOrdinal++]));
             perMarker.set(marker, (perMarker.get(marker) ?? 0) + 1);
             rows.push({
                 ...assertionPathToFields([...parentPath, [marker, id]]),
@@ -325,7 +372,8 @@ export function importSfm(typText: string, dataText: string,
     dictionaryConfig.writeConfigValue(opts.table, 'import_stamp', String(t));
 
     return {records: database.records.length, assertions: rows.length, perMarker,
-            droppedFields, problems, schemaProblems: derived.problems, generation};
+            droppedFields, idCollisions, problems,
+            schemaProblems: derived.problems, generation};
 }
 
 const entryTagOf = (schema: model.Schema): string => schema.relationFields[0].tag;
@@ -339,6 +387,7 @@ export function importReportMarkdown(table: string, r: SfmImportResult): string 
         `- records: ${r.records}`,
         `- assertions: ${r.assertions}`,
         `- dropped fields (marker without a relation): ${r.droppedFields}`,
+        `- id-hash collisions (re-salted deterministically): ${r.idCollisions}`,
         `- tree-recovery problems: ${r.problems.length}`,
         ...r.schemaProblems.map(p => `- SCHEMA: ${p}`),
         ``,

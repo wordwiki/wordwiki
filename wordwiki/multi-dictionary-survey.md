@@ -625,6 +625,17 @@ honor:
   reunification: DONE pre-import - merge-rand-sources.ts.)
 
   THE TWO-STEP IMPORT DESIGN (converged dz + review 2026-07-25):
+  ID SCHEME REVISED 2026-07-26 (dz): import ids are CONTENT-KEYED -
+  record id = 53-bit FNV hash of the record's canonical field text
+  (+ occurrence index for true duplicates), field ids hang off the
+  record id by emission ordinal; ids live in [2^44, 2^53), disjoint
+  from counter ids and the transform's derivedId space.  A new drop
+  with an inserted record moves NOTHING else: unchanged records keep
+  their ids, so transform-reused fact ids, references, binder cache
+  keys and future cross-dictionary links survive re-imports; an
+  EDITED record changes id, so attached human work orphans VISIBLY
+  (preserve-foreign) instead of mis-attaching.  (53 not 64 bits: JS
+  integer round-tripping - dz.)
   STEP 1 - auto-import (no user intervention; encoding is the one
   CLI flag): the schema is a PURE FUNCTION OF THE .TYP (stable per
   .typ, no data sniffing) - every marker = a RELATION with one

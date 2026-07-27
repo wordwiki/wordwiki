@@ -433,6 +433,22 @@ eventually more) flow without cross-writes.
 - MMO's existing direct Rand-book refs: grandfathered human work;
   pairing supplements, never replaces or migrates them.
 
+## 6a. Identity across drops: CONTENT-KEYED import ids (dz 2026-07-26)
+
+Asking "what invalidates the binder cache?" surfaced the real issue:
+POSITIONAL import ids.  A record inserted mid-file shifted every
+later id - which would not only re-extract every page (file order is
+orthogonal to page order, so 'half' is really 'all'), but worse,
+make preserved human work MIS-ATTACH after a re-drop (old ids dealt
+to different records).  sfm-import now mints CONTENT-KEYED ids (see
+multi-dictionary-survey.md phase 5): unchanged records keep their
+identity across drops, edited records orphan visibly, and the
+binder's prompts/cache keys stop moving.  Same applies to future
+cross-dictionary links (dz) - and post-dev, re-imports should be
+rare anyway.  Dev re-imported (randraw gen 3, rand gen 6); the
+10-page eval re-extracted once under the new ids (1,064/1,067,
+3 below-threshold, 2 unmatched - v3-equivalent).
+
 ## 6b. What the 'rand' corpus IS (dz 2026-07-26, reading the bindings)
 
 Reviewing a thousand proposals side by side made two things plain

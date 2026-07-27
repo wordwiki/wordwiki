@@ -67,6 +67,12 @@ document references like MMO's, doc of record
   to the column edge) + --review-html visual page (scan + FULL
   entry side by side, resources/rand-binder-review.html).
   10-page v3: 1,064/1,067, 4 widened.
+- CONTENT-KEYED import ids (dz approved 2026-07-26): 53-bit FNV of
+  canonical record text (+occurrence), field ids by ordinal, space
+  [2^44,2^53) disjoint from counters/derivedId; unchanged records
+  keep identity across Watson drops (cache + refs + links survive;
+  edits orphan visibly).  Dev: randraw gen 3, rand gen 6, eval
+  re-extracted once (1,064/1,067).
 - dz's review insights (doc §6b): the corpus IS Rand + Watson's
   REVISIONS (display name config set to 'Rand 1888, transcribed and
   revised by Watson'; \xv/\xe = interpretation layer, scan+bindings

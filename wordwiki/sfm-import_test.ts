@@ -79,7 +79,12 @@ test("import: tree mode - deterministic literal load, browsable, re-run rules", 
             assertEquals(r1.generation, 1);
 
             const store = ww.storeFor('toyraw');
-            const entries = store.entries as any[];
+            const all = store.entries as any[];
+            // Content-keyed ids: store order is id order, not file order -
+            // address records by their content.
+            const entries = [
+                all.find(e => e.lx[0].content === 'alpha'),
+                all.find(e => e.lx[0].content === 'beta')] as any[];
             assertEquals(entries.length, 2);
             // Record 1: headword content + nested ps/ge tree + the 1d marker.
             assertEquals(entries[0].lx[0].content, 'alpha');
@@ -141,7 +146,8 @@ test("import: RAND in TREE mode via the STRUCTURAL typ - senses group", async ()
                 {table: 'randtree', structure: 'tree', stopAfterCount: 50}));
             assertEquals(r.problems, []);
             assertEquals(r.droppedFields, 0);
-            const e0 = (ww.storeFor('randtree').entries as any[])[0];
+            const e0 = (ww.storeFor('randtree').entries as any[])
+                .find((e: any) => e.lx[0]?.content === "e'n");
             assertEquals(e0.lx[0].content, "e'n");
             // TWO senses, each its own group; the example PAIRED in its sense.
             assertEquals(e0.ps.length, 2);
@@ -180,16 +186,18 @@ test("import: a REAL RAND sample (flat), browsed through the facade", async () =
             assertEquals(r.problems, []);
             assertEquals(r.droppedFields, 0);
 
-            const entries = ww.storeFor('randraw').entries as any[];
-            assertEquals(entries.length, 200);
-            assertEquals(entries[0].lx[0].content, "e'n");
+            const allFlat = ww.storeFor('randraw').entries as any[];
+            assertEquals(allFlat.length, 200);
+            const en = allFlat.find((e: any) => e.lx[0]?.content === "e'n");
+            assertEquals(en.lx[0].content, "e'n");
             // The facade browses it, mirror banner included.
             const home = JSON.stringify(await as(fx, 'djz',
                 () => renderRoute(ww, `wordwiki.dicts.randraw.home()`)));
             assertEquals(home.includes("e'n"), true);
             assertEquals(home.includes('Import mirror of Rand Mig Eng Dictt 29097'), true);
             const word = JSON.stringify(await as(fx, 'djz',
-                () => renderRoute(ww, `wordwiki.dicts.randraw.word(1000)`)));
+                () => renderRoute(ww,
+                    `wordwiki.dicts.randraw.word(${en.entry_id})`)));
             assertEquals(word.includes("e'n"), true);
             assertEquals(word.includes('wife'), true);   // the \xe value rides along
         } finally {

@@ -103,10 +103,17 @@ test("preserve-foreign: human facts survive; tombstones stay dead; orphans repor
             assertEquals([r1.entries, r1.preservedFacts, r1.orphans], [3, 0, []]);
 
             const q = (sql: string, p: any = {}): any[] => db().all<any, any>(sql, p);
-            const [g1, g2, g3] = q(
-                `SELECT * FROM psvtgt WHERE ty='gls' ORDER BY id1`);
+            // Content-keyed ids: address the gls facts by content.
+            const gl = (a: string) => q(
+                `SELECT * FROM psvtgt WHERE ty='gls' AND attr1=:a`, {a})[0];
+            const [g1, g2, g3] = [gl('g1'), gl('g2'), gl('g3')];
             const noteId = q(`SELECT id FROM psvtgt WHERE ty='not'`)[0].id;
-            const e3 = g3.id1;
+            // stopAfterCount slices the source STORE's entry order (id
+            // order under content-keyed ids) - compute which entry a
+            // sample=2 re-run will DROP, and hang the hand-added fact there.
+            const dropped = (ww.storeFor('psvsrc').entries as any[])[2].entry_id;
+            const droppedGls = q(
+                `SELECT * FROM psvtgt WHERE ty='gls' AND id1=:e`, {e: dropped})[0];
             // Human EDIT of g1: supersede (close the machine row, chain a
             // human-authored version on the same fact id).
             db().execute(`UPDATE psvtgt SET valid_to=:t WHERE assertion_id=:a`,
@@ -121,9 +128,13 @@ test("preserve-foreign: human facts survive; tombstones stay dead; orphans repor
             db().insert('psvtgt', {...g2, assertion_id: 900004,
                 replaces_assertion_id: g2.assertion_id, valid_from: g2.valid_from + 1,
                 valid_to: g2.valid_from + 1, change_by_username: 'djz'}, 'assertion_id');
-            // Human-ADDED fact under entry 3 (a gloss the machine never computed).
-            db().insert('psvtgt', {...g3, assertion_id: 900002, id: 900002,
-                id2: 900002, attr1: 'hand-added', change_by_username: 'djz'}, 'assertion_id');
+            // Human-ADDED fact under the to-be-dropped entry (a gloss the
+            // machine never computed).
+            db().insert('psvtgt', {...droppedGls, assertion_id: 900002, id: 900002,
+                id2: 900002, attr1: 'hand-added',
+                valid_from: droppedGls.valid_from + 2, valid_to: EOT,
+                replaces_assertion_id: null,
+                change_by_username: 'djz'}, 'assertion_id');
 
             // Without the flag: still refuses.
             let refused: any;
@@ -163,7 +174,8 @@ test("preserve-foreign: human facts survive; tombstones stay dead; orphans repor
             // deleted.  (sample=2 drops entry 3.)
             const r3 = dt.runTransform('psvtgt', ww.storeFor('psvsrc'),
                                        {preserveForeign: true, stopAfterCount: 2});
-            assertEquals(r3.orphans.map(o => [o.id, o.missingAncestor]), [[900002, e3]]);
+            assertEquals(r3.orphans.map(o => [o.id, o.missingAncestor]),
+                         [[900002, dropped]]);
             assertEquals(q(`SELECT attr1 FROM psvtgt WHERE id=900002`)
                          .map(r => r.attr1), ['hand-added']);
             // The skeleton entry stub keeps the store LOADING (worklist,
@@ -171,7 +183,7 @@ test("preserve-foreign: human facts survive; tombstones stay dead; orphans repor
             const store = ww.storeFor('psvtgt');
             store.requestWorkspaceReload();
             assertEquals((store.entries as any[]).length, 3);
-            const stub = (store.entries as any[]).find(e => e.entry_id === e3);
+            const stub = (store.entries as any[]).find(e => e.entry_id === dropped);
             assertEquals(stub.gloss.map((g: any) => g.gloss), ['hand-added']);
         } finally {
             db().executeStatements(
@@ -210,9 +222,11 @@ test("the MERGED corpus: lanes, partition + divergence ride as attrs", async () 
                 dt.runTransform('rand', ww.storeFor('randraw'));
             });
             const entries = ww.storeFor('rand').entries as any[];
-            // Final #1 ('a') is partition-tagged; SOME sampled final has
-            // BOTH lanes on one entry - the fork, reunified.
-            const e0 = entries[0];
+            // Final 'a' is partition-tagged; SOME sampled final has
+            // BOTH lanes on one entry - the fork, reunified.  (Content-
+            // keyed ids: entries are addressed by content, not position.)
+            const e0 = entries.find((e: any) =>
+                (e.spelling ?? []).some((sp: any) => sp.text === 'a'));
             assertEquals(e0.spelling.map((s: any) => [s.text, s.variant]),
                          [['a', 'mm-li']]);         // its \lsf is empty
             assertEquals(e0.attr.some((a: any) =>
@@ -258,7 +272,8 @@ test("transform: REAL RAND -> a rich entry (deterministic; edits block)", async 
 
             // e'n, transformed: lanes, senses, paired example, parsed source.
             const rand = ww.storeFor('rand');
-            const e0 = (rand.entries as any[])[0];
+            const e0 = (rand.entries as any[]).find((e: any) =>
+                (e.spelling ?? []).some((sp: any) => sp.text === "e'n"));
             assertEquals(e0.spelling.map((s: any) => [s.text, s.variant]),
                          [["e'n", 'mm-li']]);          // empty lsf skipped
             assertEquals(e0.subentry.length, 1);       // the all-empty sense vanished
@@ -274,7 +289,8 @@ test("transform: REAL RAND -> a rich entry (deterministic; edits block)", async 
             assertEquals(e0.attr[0].value, '02/Nov/2024');
             // DETERMINISTIC id: the spelling reuses its source fact id, and
             // the entry keeps the raw entry's id.
-            const raw0 = (ww.storeFor('randraw').entries as any[])[0];
+            const raw0 = (ww.storeFor('randraw').entries as any[])
+                .find((e: any) => e.entry_id === e0.entry_id);
             assertEquals(e0.entry_id, raw0.entry_id);
             assertEquals(e0.spelling[0].spelling_id, raw0.lx[0].lx_id);
 
