@@ -113,6 +113,9 @@ export interface TransformMapping {
     formatVersion: number;
     sources: Array<{table: string, schemaHash?: string}>;
     targetSchema: any;
+    // The target dictionary's DISPLAY NAME (config 'name') - part of the
+    // recipe so a fresh migration reproduces it (the navbar/pages read it).
+    targetName?: string;
     // The ENTRY ROOT's valid_from from a source field (dz: the ent
     // assertion never changes - its valid_from IS the entry's creation
     // date; MMO's migration uses the shoebox date the same way).  The

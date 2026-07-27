@@ -5,6 +5,7 @@
    "table": "randraw"
   }
  ],
+ "targetName": "Rand 1888, transcribed and revised by Watson",
  "entryValidFrom": {
   "from": "dt",
   "parser": "shoeboxDate"

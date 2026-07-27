@@ -784,6 +784,8 @@ export async function cliMain(args: string[]): Promise<void> {
                         dictionaryConfig.createDictionary(target, json.targetSchema, {slug: target});
                     dictionaryConfig.writeConfigValue(target, 'transform',
                                                       JSON.stringify(json, null, 1));
+                    if(json.targetName)
+                        dictionaryConfig.writeConfigValue(target, 'name', String(json.targetName));
                     console.info(`APPLIED to '${target}' - run: ./wordwiki.sh transform ${target}`);
                 } else console.info('(dry run - pass --apply to install it)');
                 return 0;
