@@ -1,0 +1,68 @@
+# rand<->MMO pairing ('~rand-mmo-pair', language rules v2) - DRY RUN
+
+- pairs: 2679 (medium 832 / high 1847)
+- multi-pair worklist (rand entries with >1 same-word candidate; top kept): 211
+
+## Sample pairs (highest score first)
+- **eliga'teget** <-> **eliga'teget** [high; exact-skel+def-overlap]
+- **apigsigtuatl** <-> **apigsigtuatl** [high; exact-skel+def-overlap]
+- **aptaqatg** <-> **aptaqatg** [high; exact-skel+def-overlap]
+- **apoqonmuatl** <-> **apoqonmuatl** [high; exact-skel+def-overlap]
+- **temastaqte'muet** <-> **temastaqte'muet** [high; exact-skel+def-overlap]
+- **amalignoqji'j** <-> **amalignoqji'j** [high; exact-skel+def-overlap]
+- **ne'tata'sit** <-> **ne'tata'sit** [high; exact-skel+def-overlap]
+- **elisgnuet** <-> **elisgnuet** [high; exact-skel+def-overlap]
+- **angamsit** <-> **angamsit** [high; exact-skel+def-overlap]
+- **gnugwatign** <-> **gnugwatign** [high; exact-skel+def-overlap]
+- **wegwatesg** <-> **megwatesg** [medium; near-skel+def-overlap]
+- **elue'wit** <-> **elue'wit** [high; exact-skel+def-overlap]
+- **tepiaq** <-> **tepiaq** [high; exact-skel+def-overlap]
+- **eligpete'get** <-> **eligpete'get** [high; exact-skel+def-overlap]
+- **aqtamgiet** <-> **aqtamgiet** [high; exact-skel+def-overlap]
+- **esiputoq** <-> **esiputoq** [high; exact-skel+def-overlap]
+- **apji'jgmuj** <-> **apji'jgmuj** [high; exact-skel+def-overlap]
+- **pem'pugua'sit** <-> **pempugua'sit** [high; exact-skel+def-overlap]
+- **poqwasnigan** <-> **poqwasni'gan** [high; exact-skel+def-overlap]
+- **antawe's** <-> **antawe's** [high; exact-skel+def-overlap]
+- **agnutmajig** <-> **agnutmajig** [high; exact-skel+def-overlap]
+- **npuinu** <-> **npuinu** [high; exact-skel+def-overlap]
+- **pi'wej** <-> **pi'wej** [high; exact-skel+def-overlap]
+- **jilpit** <-> **jilpit** [high; exact-skel+def-overlap]
+- **wejipeg** <-> **wejipeg** [high; exact-skel+def-overlap]
+- **naqt`g** <-> **naqt'g** [high; exact-skel+def-overlap]
+- **ase'g** <-> **a'se'g** [high; exact-skel+def-overlap]
+- **nnui'sit** <-> **lnui'sit** [high; exact-skel+def-overlap]
+- **Nnu** <-> **lnu** [high; exact-skel+def-overlap]
+- **giuset** <-> **giwset** [medium; near-skel+def-overlap]
+- **Apignajit** <-> **apignajit** [high; exact-skel+def-overlap]
+- **gl'pisun** <-> **glpisun** [high; exact-skel+def-overlap]
+- **apgwa'toq** <-> **apgwa'toq** [high; exact-skel+def-overlap]
+- **apgwa'latl** <-> **apgwa'latl** [high; exact-skel+def-overlap]
+- **apgwa'sit** <-> **apgwa'sit** [high; exact-skel+def-overlap]
+- **apigjilu** <-> **apigjilu** [high; exact-skel+def-overlap]
+- **apigji'j** <-> **apigji'j** [high; exact-skel+def-overlap]
+- **asimatl** <-> **asimatl** [high; exact-skel+def-overlap]
+- **gisigwet** <-> **gisigwet** [high; exact-skel+def-overlap]
+- **awije'jg** <-> **awije'jg** [high; exact-skel+def-overlap]
+
+## Multi-pair worklist (sample)
+- **mespogwet**: kept mespo'qweg, also matched mespo'qwet
+- **paqapuguet**: kept pa'qapuguet, also matched pa'qapuguatg
+- **nipi**: kept nipi, also matched nipi-
+- **ginisgwe'g**: kept ginisgwe'g, also matched gini'sgwe'g, ginisgwig
+- **tetmns`gani'gan**: kept tetmns'gani'gan, also matched tetmnsegani'gat
+- **angua'taqan**: kept angua'taqan, also matched angua'toq
+- **gamlamuti**: kept gamlamit, also matched uggamlamuti
+- **espeg**: kept espeg, also matched espet
+- **pejilasit**: kept pejila'sit, also matched pejila'sit
+- **mal'tewiaq**: kept maltewiaq, also matched maltewiet
+- **elege'wi'sgw**: kept elege'wi'sgw, also matched elege'wi'sgwe'j
+- **saqamaw**: kept saqamaw, also matched saqama'sgw, saqamawit
+- **ewi'giget**: kept ewi'giget, also matched ewi'gigeg
+- **waqjuig**: kept waqjuig, also matched waqjuigit
+- **jipauet**: kept jipaluet, also matched jipaluejit
+- **msiguiganig**: kept msigui'ganmit, also matched msigui'gan, msigui'gana'q
+- **maligew**: kept malige'w, also matched malige'wa't
+- **ginisgwe'g**: kept ginisgwe'g, also matched gini'sgwe'g, ginisgwig
+- **mal'te'wit**: kept maltewit, also matched maltewig
+- **nutlugwet**: kept nata'lugwet, also matched nutalugwet

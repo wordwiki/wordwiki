@@ -63,7 +63,14 @@ sketch + rand-references §6 pairing).  Core:
   unrelated, 7.4% REFERRAL band (LLM only there, ~$30 Sonnet).
   vs 42 Opus refs: 36 agree/4 refer/2 boundary.  v3 candidates:
   gloss-vs-example token weighting; possible-synonym band tuning.
-  NEXT: '~rand-mmo-pair' landing consumes rule verdicts (+LLM band
-  when funded); CLI similarity-verdicts.
+- machineSync BUILT (wordwiki/machine-sync.ts, full case table
+  tested) + '~rand-mmo-pair' LANDED 2026-07-27 (mikmaq/pairing.ts,
+  CLI pair-rand-mmo): 2,679 pairs both sides (1,847 high/832 med),
+  211 multi-pair worklist; re-apply = 2,679 unchanged ZERO writes.
+  Counterpart relations: rand.mmo_counterpart 'mcp' /
+  dict.rand_counterpart 'rcp' (roles counterpart/related +
+  $targetDictionary in model.ts; audience internal).  NEXT:
+  support-panel rendering (raw ids now); '~xref' related landing;
+  LLM referral band when funded.
 **How to apply:** build in doc §6 order.  See [[machine-contributors]],
 [[rand-references-project]].

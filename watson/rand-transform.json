@@ -572,6 +572,38 @@
       "$defaultAll": true
      }
     }
+   },
+   "mmo_counterpart": {
+    "$type": "relation",
+    "$tag": "mcp",
+    "$role": "counterpart",
+    "$targetDictionary": "dict",
+    "mmo_counterpart_id": {
+     "$type": "primary_key"
+    },
+    "target_entry_id": {
+     "$type": "integer",
+     "$bind": "attr1"
+    },
+    "confidence": {
+     "$type": "string",
+     "$bind": "attr2",
+     "$optional": true
+    },
+    "evidence": {
+     "$type": "string",
+     "$bind": "attr3",
+     "$optional": true
+    },
+    "$style": {
+     "$shape": "compactInlineListRelation",
+     "$view": {
+      "order": 13,
+      "label": "inline",
+      "empty": "elide",
+      "audience": "internal"
+     }
+    }
    }
   }
  },

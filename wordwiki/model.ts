@@ -233,11 +233,17 @@ export type RoleName =
     | 'log'                // the session-log relation
     | 'category'           // categorization (site categories, word-a-day)
     | 'recording'          // entry-level recordings (featured-recording pool)
-    | 'documentReference'; // reference-book citations (bounding groups)
+    | 'documentReference'  // reference-book citations (bounding groups)
+    | 'counterpart'        // the near-1:1 same-entry-in-another-dictionary
+                           //   link (similarity-design.md §3b; pairs with
+                           //   $targetDictionary)
+    | 'related';           // the ranked related-entries link (§3b; also
+                           //   $targetDictionary - the dictionary itself
+                           //   for A<->A)
 
 const ROLE_NAMES: RoleName[] = [
     'lifecycle', 'publicGate', 'workflowTag', 'log', 'category', 'recording',
-    'documentReference'];
+    'documentReference', 'counterpart', 'related'];
 
 export interface RoleDeclaration {
     name: RoleName;
@@ -894,7 +900,11 @@ export class RelationField extends Field {
     #parentFieldsColIndex_: number|undefined;
 
     constructor(name: string, public tag: string, public modelFields: Field[], style: Style={},
-                public role: RoleDeclaration|undefined = undefined) {
+                public role: RoleDeclaration|undefined = undefined,
+                /** For LINK relations (counterpart/related roles): which
+                 *  dictionary the target ids refer to (similarity-design.md
+                 *  §3b - an ANNOTATION, never parsed out of names). */
+                public targetDictionary: string|undefined = undefined) {
         super(name, style);
     }
 
@@ -1137,6 +1147,7 @@ export class RelationField extends Field {
         json.$type = 'relation';
         json.$tag = this.tag;
         this.role && (json.$role = roleToCompactJson(this.role));
+        this.targetDictionary !== undefined && (json.$targetDictionary = this.targetDictionary);
         const {$prompt, ...restStyle} = this.style;
         $prompt !== undefined && (json.$prompt = $prompt);
         const styleJson = styleToCompactJson(restStyle);
@@ -1149,7 +1160,9 @@ export class RelationField extends Field {
     }
 
     static parseSchemaFromCompactJson(locus: string, name: string, schemaJson: any): RelationField {
-        const {$type, $tag, $prompt, $style, $role, ...field_schema} = schemaJson;
+        const {$type, $tag, $prompt, $style, $role, $targetDictionary, ...field_schema} = schemaJson;
+        if($targetDictionary !== undefined && typeof $targetDictionary !== 'string')
+            throw new ValidationError(locus, `$targetDictionary must be a string`);
         if($type !== 'relation')
             throw new ValidationError(locus, `expected relation type got $type ${$type}`);
         if(typeof $tag !== 'string')
@@ -1197,7 +1210,8 @@ export class RelationField extends Field {
             throw new ValidationError(locus,
                 `relation '${name}' has both a variant field ('${variantField.name}') and a child relation ('${childRelation.name}') - variant fields are only allowed on leaf relations`);
 
-        const schema = new RelationField(name, $tag, fields, style, role);
+        const schema = new RelationField(name, $tag, fields, style, role,
+                                         $targetDictionary as string|undefined);
 
         return schema;
     }

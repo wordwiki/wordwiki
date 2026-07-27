@@ -24,61 +24,36 @@ import { levenshteinDistance } from '../liminal/levenshtein-distance.ts';
 import { db } from '../liminal/db.ts';
 import type { Candidate, CandidateEvidence, KeyKind } from './similarity.ts';
 
-export const RULES_VERSION = 2;   // bump when rules change (reports carry it)
+export interface LanguageRules {
+    version: number;               // the language package bumps on change
+    /** Inflectional FINALS (skeleton space) whose removal exposes a
+     *  comparable stem; longest-match, MIN_STEM guarded. */
+    verbFinals: string[];
+    /** The diminutive suffix (skeleton space), if the language has one. */
+    diminutive?: string;
+    /** Curated KNOWN ROOTS: a shared root INSIDE both words + meaning
+     *  overlap = a root family.  The linguist's growing data. */
+    rootLexicon: Array<{root: string, sense: string}>;
+    minStem: number;
+    prefixStrong: number;          // shared initial >= this = family evidence
+    prefixWeak: number;            //   ... >= this counts only with meaning
+    nearLen1: number;              // near-skeleton: dist<=1 up to this length
+    rareDefDf: number;             // a def token this rare refers alone
+    synonymDefDf: number;          // single-token possible-synonym band
+}
 
-// ---------------------------------------------------------------------------------
-// --- Mi'gmaq morphology data (REVIEW ME) ---------------------------------------------
-// ---------------------------------------------------------------------------------
+/** Language-neutral: no morphology, thresholds only - the skeleton/def
+ *  rules still work.  Language packages REGISTER their rules at the
+ *  binary edge (mikmaq/register.ts); general code never imports them. */
+export const EMPTY_RULES: LanguageRules = {
+    version: 0, verbFinals: [], rootLexicon: [],
+    minStem: 4, prefixStrong: 5, prefixWeak: 3,
+    nearLen1: 8, rareDefDf: 3, synonymDefDf: 10,
+};
 
-/** Verb/paradigm FINALS in skeleton space: inflectional endings whose
- *  removal exposes a comparable stem.  Longest-match wins; the remaining
- *  stem must keep MIN_STEM letters.  Sources: the ps-code paradigm
- *  structure + endings observed across the corpora.  CONSERVATIVE ON
- *  PURPOSE - a missing ending costs a referral, a wrong one costs a
- *  false root. */
-export const VERB_FINALS: string[] = [
-    'ultijik', 'atijik', 'ijik', 'ajik',
-    'eget', 'eket', 'iget', 'iket',
-    'atoq', 'atl', 'asit', 'atas', 'ates', 'alsit',
-    'aqan', 'igan',
-    'et', 'it', 'it',
-].toSorted((a, b) => b.length - a.length);
-
-/** The diminutive suffix (skeleton space: ji'j -> jij). */
-export const DIMINUTIVE = 'jij';
-
-/** KNOWN ROOTS (skeleton space) - the curated root lexicon, the heart of
- *  the language-rules project: a shared lexicon root INSIDE both words
- *  (not just at the start) plus meaning overlap = a root family.  Seeded
- *  from the first eval's misses; GROW ME (each entry names the root and
- *  its sense for the reviewer). */
-export const ROOT_LEXICON: Array<{root: string, sense: string}> = [
-    {root: 'maw',  sense: 'gather/together'},
-    {root: 'gim',  sense: 'count'},
-    {root: 'nesp', sense: 'along with/simultaneously'},
-];
-
-/** A single shared def token in this df band (rarer than common, not
- *  rare enough to refer) with NO formal link = a possible synonym pair -
- *  related, low (the related role WANTS synonyms; 'collect' at df 21
- *  stays a coincidence). */
-export const SYNONYM_DEF_DF = 10;
-
-/** Minimum stem length left after stripping a final. */
-export const MIN_STEM = 4;
-
-/** Shared-initial thresholds for root-family membership (maw-, nesp-...):
- *  a shared prefix of >= STRONG letters is family evidence on its own;
- *  >= WEAK letters counts only alongside meaning overlap. */
-export const PREFIX_STRONG = 5;
-export const PREFIX_WEAK = 3;
-
-/** Near-skeleton: edit distance <= 1 for words up to NEAR_LEN_1, <= 2
- *  above (length-scaled typo/orthography tolerance). */
-export const NEAR_LEN_1 = 8;
-
-/** A def token this rare (df <=) is meaningful evidence even alone. */
-export const RARE_DEF_DF = 3;
+let activeRules: LanguageRules = EMPTY_RULES;
+export function registerLanguageRules(r: LanguageRules): void { activeRules = r; }
+export function languageRules(): LanguageRules { return activeRules; }
 
 // ---------------------------------------------------------------------------------
 // --- Morphology helpers ---------------------------------------------------------------
@@ -86,9 +61,10 @@ export const RARE_DEF_DF = 3;
 
 /** Strip ONE final (longest match, stem-length guarded); undefined = no
  *  final applies. */
-export function stripFinal(skel: string): {stem: string, final: string}|undefined {
-    for(const f of VERB_FINALS)
-        if(skel.endsWith(f) && skel.length - f.length >= MIN_STEM)
+export function stripFinal(skel: string, rules: LanguageRules = activeRules)
+        : {stem: string, final: string}|undefined {
+    for(const f of rules.verbFinals)
+        if(skel.endsWith(f) && skel.length - f.length >= rules.minStem)
             return {stem: skel.slice(0, -f.length), final: f};
     return undefined;
 }
@@ -99,9 +75,9 @@ export function sharedPrefixLen(a: string, b: string): number {
     return i;
 }
 
-function nearSkeleton(a: string, b: string): boolean {
+function nearSkeleton(a: string, b: string, rules: LanguageRules): boolean {
     if(a === b) return false;                       // 'near' means not exact
-    const max = Math.max(a.length, b.length) <= NEAR_LEN_1 ? 1 : 2;
+    const max = Math.max(a.length, b.length) <= rules.nearLen1 ? 1 : 2;
     return Math.abs(a.length - b.length) <= max
         && levenshteinDistance(a, b) <= max;
 }
@@ -136,11 +112,12 @@ export interface RuleResult {
 /** Judge one candidate pair from its two key sets + the pass-0 evidence.
  *  The rules are ORDERED - first match wins. */
 export function ruleVerdict(probe: EntrySimKeys, target: EntrySimKeys,
-                            evidence: CandidateEvidence[]): RuleResult {
+                            evidence: CandidateEvidence[],
+                            rules: LanguageRules = activeRules): RuleResult {
     const defOverlap = probe.defs.filter(t => target.defs.includes(t));
     const bothHaveDefs = probe.defs.length > 0 && target.defs.length > 0;
     const sharedDefEvidence = evidence.filter(ev => ev.kind === 'def');
-    const rareShared = sharedDefEvidence.filter(ev => ev.df <= RARE_DEF_DF);
+    const rareShared = sharedDefEvidence.filter(ev => ev.df <= rules.rareDefDf);
 
     // --- 1. EXACT skeleton ------------------------------------------------------
     const exact = probe.skels.some(s => target.skels.includes(s));
@@ -159,7 +136,7 @@ export function ruleVerdict(probe: EntrySimKeys, target: EntrySimKeys,
     }
 
     // --- 2. NEAR skeleton -------------------------------------------------------
-    const near = probe.skels.some(ps => target.skels.some(ts => nearSkeleton(ps, ts)));
+    const near = probe.skels.some(ps => target.skels.some(ts => nearSkeleton(ps, ts, rules)));
     if(near) {
         if(defOverlap.length > 0)
             return {verdict: 'same-word', confidence: 'medium',
@@ -169,10 +146,11 @@ export function ruleVerdict(probe: EntrySimKeys, target: EntrySimKeys,
 
     // --- 3. Morphology: diminutive / same stem ----------------------------------
     for(const ps of probe.skels) for(const ts of target.skels) {
-        if(ts === ps + DIMINUTIVE || ps === ts + DIMINUTIVE)
+        if(rules.diminutive !== undefined
+           && (ts === ps + rules.diminutive || ps === ts + rules.diminutive))
             return {verdict: 'related', confidence: 'high',
                     rule: 'diminutive', qualifier: 'diminutive'};
-        const pf = stripFinal(ps), tf = stripFinal(ts);
+        const pf = stripFinal(ps, rules), tf = stripFinal(ts, rules);
         const pStem = pf?.stem ?? ps, tStem = tf?.stem ?? ts;
         if((pf !== undefined || tf !== undefined) && pStem === tStem)
             return {verdict: 'related', confidence: 'high',
@@ -184,7 +162,7 @@ export function ruleVerdict(probe: EntrySimKeys, target: EntrySimKeys,
     // (v2 - the -gim- counting-root case: internal roots are invisible to
     // prefix logic; the lexicon is the linguist's growing data.)
     if(defOverlap.length > 0)
-        for(const {root, sense} of ROOT_LEXICON)
+        for(const {root, sense} of rules.rootLexicon)
             if(probe.skels.some(ps => ps.includes(root))
                && target.skels.some(ts => ts.includes(root)))
                 return {verdict: 'related', confidence: 'medium',
@@ -198,10 +176,10 @@ export function ruleVerdict(probe: EntrySimKeys, target: EntrySimKeys,
             // mild (v2: 0.4 killed the maw- family on 8+ letter words).
             return l >= Math.min(ps.length, ts.length) * 0.25 ? l : 0;
         })));
-    if(bestPrefix >= PREFIX_STRONG && defOverlap.length > 0)
+    if(bestPrefix >= rules.prefixStrong && defOverlap.length > 0)
         return {verdict: 'related', confidence: 'medium',
                 rule: 'root-family', qualifier: 'shared root'};
-    if(bestPrefix >= PREFIX_WEAK && defOverlap.length > 0)
+    if(bestPrefix >= rules.prefixWeak && defOverlap.length > 0)
         return {verdict: 'related', confidence: 'low',
                 rule: 'weak-root-family', qualifier: 'possibly shared root'};
 
@@ -216,7 +194,7 @@ export function ruleVerdict(probe: EntrySimKeys, target: EntrySimKeys,
     // v2: a single moderately-uncommon shared token = a possible synonym
     // (the related role wants synonyms; the etawet/mesugtaqanat 'crave'
     // case) - common tokens still fall through to the coincidence rule.
-    if(sharedDefEvidence.some(ev => ev.df <= SYNONYM_DEF_DF))
+    if(sharedDefEvidence.some(ev => ev.df <= rules.synonymDefDf))
         return {verdict: 'related', confidence: 'low',
                 rule: 'possible-synonym', qualifier: 'possible synonym'};
 
@@ -263,7 +241,7 @@ export function ruleReportMarkdown(dictA: string, dictB: string, pairs: RuledPai
     const ruleCounts = new Map<string, number>();
     for(const p of pairs) ruleCounts.set(p.rule, (ruleCounts.get(p.rule) ?? 0) + 1);
     const lines = [
-        `# Similarity pass 1a (rules v${RULES_VERSION}): '${dictA}' -> '${dictB}'`,
+        `# Similarity pass 1a (language rules v${activeRules.version}): '${dictA}' -> '${dictB}'`,
         ``,
         `- pairs: ${pairs.length}`,
         ...['same-word', 'related', 'unrelated', 'ambiguous'].map(v =>

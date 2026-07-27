@@ -309,9 +309,26 @@ those dictionaries when they exist.)
    binder) - a SONNET A/B is much more promising here than it was
    for the binder (tiny structured outputs, no long-output
    abandonment risk) and should run before the full batch.
-3. '~rand-mmo-pair' landing via machineSync (the pairing relation +
-   role, both word views' support panels) - the first consumer, the
-   Watson-packet strengthener.
+3. ~~'~rand-mmo-pair' landing via machineSync~~ BUILT + LANDED
+   2026-07-27: wordwiki/machine-sync.ts (the §2.3 reconcile primitive,
+   full case-table tested: assert/unchanged/supersede/retract/
+   reassert/human-freeze+frozen-stale/human-tombstone-respect;
+   direct-row single-transaction writes - the LexemeOps per-call
+   path rebuilds derived state per fact, hours at batch scale);
+   model.ts roles counterpart/related + $targetDictionary
+   annotation; counterpart relations on BOTH sides
+   (rand.mmo_counterpart 'mcp' / dict.rand_counterpart 'rcp',
+   audience internal until the support-panel renderer);
+   mikmaq/pairing.ts (the SPECIALIZATION - dz's packaging rule) via
+   CLI pair-rand-mmo.  DEV: 2,679 pairs (1,847 high / 832 medium),
+   211 multi-pair worklist findings; second --apply = 2,679
+   unchanged, ZERO rows written (diff-first live).  Support-panel
+   RENDERING is the follow-up (links currently render as internal
+   raw ids).
+   PACKAGING (dz 2026-07-27): the new mikmaq/ package holds
+   language/project specializations (language.ts normalizers+rules,
+   register.ts installed at the BINARY EDGE by cli.ts, pairing.ts);
+   general engines expose registries/config and never import it.
 4. '~xref' A<->A on the same substrate (after the review-UX batch
    affordances of machine-contributors §4, or trickled).
 5. Pass-2 escalation when the eval shows the middle bucket earns it.

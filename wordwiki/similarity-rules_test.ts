@@ -4,6 +4,7 @@
  * (finals, stems, diminutive), root families, the rare-token and
  * coincidence rules - plus the referral band's semantics.
  */
+import '../mikmaq/register.ts';   // Mi'gmaq normalizers + rules
 import { test } from "../liminal/testing/test.ts";
 import { assertEquals } from "../liminal/testing/assert.ts";
 import * as rules from "./similarity-rules.ts";

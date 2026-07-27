@@ -770,6 +770,26 @@ export const dictSchemaJson = {
                       $view: { hidden: true, label: 'inline', audience: 'internal',
                                byline: true, bornApproved: true } },
         },
+
+        // The rand<->MMO PAIRING (similarity-design.md §3b): this entry's
+        // near-1:1 counterpart in the Watson/Rand dictionary, landed and
+        // maintained by '~rand-mmo-pair' (mikmaq/pairing.ts + machineSync).
+        // audience internal until the support-panel renderer exists; the
+        // link is TYPED by its relation ($targetDictionary), never by
+        // parsing names.
+        rand_counterpart: {
+            $type: 'relation',
+            $tag: 'rcp',
+            $role: 'counterpart',
+            $targetDictionary: 'rand',
+            rand_counterpart_id: {$type: 'primary_key'},
+            target_entry_id: {$type: 'integer', $bind: 'attr1'},
+            confidence: {$type: 'string', $bind: 'attr2', $optional: true},
+            evidence: {$type: 'string', $bind: 'attr3', $optional: true},
+            $style: { $shape: 'compactInlineListRelation',
+                      $view: { order: 90, label: 'inline', empty: 'elide',
+                               audience: 'internal' } },
+        },
     },
 };
 

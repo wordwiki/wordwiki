@@ -8,6 +8,10 @@
  * dynamic import, so wordwiki.ts <-> cli.ts is not a static module cycle).
  */
 import {db} from "../liminal/db.ts";
+// The Mi'gmaq language/project specializations register into the general
+// engines HERE, at the binary edge (mikmaq/register.ts) - general modules
+// never import the specific package (dz's packaging rule, 2026-07-27).
+import '../mikmaq/register.ts';
 import {panic} from '../liminal/utils.ts';
 import * as security from '../liminal/security.ts';
 import * as schemaUpgrade from '../liminal/schema-upgrade.ts';
@@ -32,6 +36,8 @@ import * as referenceBinder from './reference-binder.ts';
 import * as similarity from './similarity.ts';
 import * as similarityJudge from './similarity-judge.ts';
 import * as similarityRules from './similarity-rules.ts';
+import * as mikmaqPairing from '../mikmaq/pairing.ts';
+import { machineSyncReportLines as machineSyncLines } from './machine-sync.ts';
 import * as schemaRoles from './schema-roles.ts';
 import * as scannedDocument from './scanned-document.ts';
 import { loadLlm } from '../liminal/llm.ts';
@@ -1134,6 +1140,56 @@ export async function cliMain(args: string[]): Promise<void> {
                 if(detailsPath) Deno.writeTextFileSync(detailsPath, report);
             });
             Deno.exit(0);
+            break;
+        }
+
+        // The rand<->MMO PAIRING (mikmaq/pairing.ts - the first machineSync
+        // consumer).  DRY by default; --apply lands counterpart facts on
+        // BOTH sides, born-approved with confidence; re-runs are free and
+        // respect human sever/pin.
+        //   ./wordwiki.sh pair-rand-mmo [--apply] [--details=path] [--report=findings]
+        case 'pair-rand-mmo': {
+            const exitCode = security.runSystem(() => {
+                ww.ensureNewStyleTables();
+                const apply = args.includes('--apply');
+                const flag = (name: string) =>
+                    args.find(x => x.startsWith(`--${name}=`))?.slice(name.length + 3);
+                const step = stepReport(`rand<->MMO pairing`);
+                try {
+                    const r = mikmaqPairing.pairRandMmo(ww, {apply});
+                    const headwordOf = (dict: string, id: number): string => {
+                        const store = ww.storeFor(dict);
+                        const e = store.entriesById.get(id);
+                        return (e && schemaRoles.headwordFallback(store.dictSchema, e)?.text)
+                            ?? `(entry ${id})`;
+                    };
+                    step.log(`pairs: ${r.plan.pairs.length}` + (apply ? '' : ' (dry run)'));
+                    if(r.randSync) {
+                        step.log(`rand side: ${machineSyncLines(r.randSync).join('; ')}`);
+                        step.log(`MMO side: ${machineSyncLines(r.dictSync!).join('; ')}`);
+                        if(r.randSync.frozenStale.length + r.dictSync!.frozenStale.length > 0) {
+                            const sec = step.report.section('FROZEN-STALE (human-owned, machine disagrees)');
+                            for(const f of [...r.randSync.frozenStale, ...r.dictSync!.frozenStale])
+                                sec.finding(`fact ${f.id} (${f.ty})`);
+                        }
+                    }
+                    if(r.plan.multiPairWorklist.length > 0) {
+                        const sec = step.report.section('Multi-pair worklist');
+                        for(const w of r.plan.multiPairWorklist.slice(0, 40))
+                            sec.finding(`${headwordOf('rand', w.rand_entry)}: kept ` +
+                                `${headwordOf('dict', w.kept)}, also ` +
+                                w.dropped.map(d => headwordOf('dict', d)).join(', '));
+                        if(r.plan.multiPairWorklist.length > 40)
+                            sec.info(`... and ${r.plan.multiPairWorklist.length - 40} more`);
+                    }
+                    const detailsPath = flag('details');
+                    if(detailsPath) Deno.writeTextFileSync(detailsPath,
+                        mikmaqPairing.pairReportMarkdown(r, headwordOf));
+                    step.finish();
+                    return r.plan.multiPairWorklist.length > 0 ? 2 : 0;
+                } catch(e) { step.crash(e); throw e; }
+            });
+            Deno.exit(exitCode);
             break;
         }
 

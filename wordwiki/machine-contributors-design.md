@@ -239,10 +239,11 @@ their own run reports.
 
 ## 6. Order of work
 
-1. The predicate + machineSync + deterministic ids as a library
-   (assertion-level, dictionary-generic), with the run report.
-   Tests: freeze on human edit / approval; no-reassert on human
-   tombstone; diff-first zero-churn; frozen-stale reporting.
+1. ~~The predicate + machineSync + deterministic ids as a library~~
+   BUILT 2026-07-27: wordwiki/machine-sync.ts, first consumer
+   '~rand-mmo-pair' (mikmaq/pairing.ts) - 2,679 pairs landed both
+   sides on dev, re-run = zero writes.  Tests cover the full case
+   table incl. freeze/frozen-stale/human-tombstone.
 2. machineFeedback query + the review-UI "reason" invitation.
 3. First instance: categories catch-up ('~categorizer') — proves the
    model end to end on the existing AI content.

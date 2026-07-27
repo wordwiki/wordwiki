@@ -5,6 +5,7 @@
  * and IDF-weighted blocking - forming vs corroborating keys (the
  * 'bear bite' vs 'time' rule), self-pair exclusion, top-N.
  */
+import '../mikmaq/register.ts';   // Mi'gmaq normalizers + rules
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals } from "../liminal/testing/assert.ts";
 import { db } from "../liminal/db.ts";
