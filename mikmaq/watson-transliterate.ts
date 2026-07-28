@@ -147,6 +147,34 @@ export function transliterateWsfToMmli(word: string): string {
     return transliterateWliToMmli(transliterateWsfToWli(word));
 }
 
+/** The mm-targeting AMBIGUITY pattern: after the rules run, every
+ *  echo-vowel epenthesis site (VqV[nm] with matching vowels) is a ranked
+ *  branch - Watson's own writing is split on it (70:76 word-final), and
+ *  the modern corpus keeps both shapes.  Written vowel preferred (the
+ *  rules' choice); the empty branch matches the unwritten form, so
+ *  orthoMatch grades aqan/aqn pairs 'candidate' instead of leaving them
+ *  to the near-skeleton guess. */
+function epenthesisPattern(w: string): Pattern {
+    const p: Pattern = [];
+    let last = 0;
+    for(const m of w.matchAll(/([aeiou])q\1(?=[nm])/g)) {
+        const lit = w.slice(last, m.index! + 2);      // ...Vq
+        if(lit !== '') p.push({alternatives: [lit]});
+        p.push({alternatives: [m[1], '']});           // the echo vowel
+        last = m.index! + 3;
+    }
+    const tail = w.slice(last);
+    if(tail !== '' || p.length === 0) p.push({alternatives: [tail]});
+    return p;
+}
+
+export function wliMmliCandidatePattern(word: string): Pattern {
+    return epenthesisPattern(transliterateWliToMmli(word));
+}
+export function wsfMmliCandidatePattern(word: string): Pattern {
+    return epenthesisPattern(transliterateWsfToMmli(word));
+}
+
 /** watson-li → mm-li.  The lanes are already close (Watson→Dianne
  *  heritage; identity 79% on high-confidence pairs) - v1 takes only the
  *  fully systematic residue.  The rest of the clusters (vowel-length

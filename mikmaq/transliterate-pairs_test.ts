@@ -90,6 +90,12 @@ test("orthoMatch over the real pairs", () => {
     // ...and the call is symmetric.
     assertEquals(orthoMatch('naqt`g', 'watson-li', 'naqtɨk', 'watson-sf').grade,
                  'candidate');
+    // The epenthesis branch on the mm-targeting pairs: aqan/aqn both
+    // match, as candidate - the E-class rescue.
+    assertEquals(orthoMatch('mimgwaqn', 'watson-li', 'mimgwaqan', 'mm-li').grade,
+                 'exact');                       // the rules' own choice
+    assertEquals(orthoMatch('mimgwaqn', 'watson-li', 'mimgwaqn', 'mm-li'),
+                 {grade: 'candidate', via: 'wli-mmli', rank: 1});
     // The raw cross-lane skeleton floor (no registered rand->dict pair).
     assertEquals(orthoMatch("sa'qati", 'rand', 'saqati', 'mm-li').grade,
                  'skeleton');

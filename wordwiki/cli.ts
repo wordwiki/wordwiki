@@ -1161,7 +1161,12 @@ export async function cliMain(args: string[]): Promise<void> {
                 const flag = (name: string) =>
                     args.find(x => x.startsWith(`--${name}=`))?.slice(name.length + 3);
                 const cands = similarity.candidatePairs(a, b);
-                const pairs = similarityRules.ruleVerdicts(a, b, cands);
+                const spellingsOf = (dict: string, id: number) => {
+                    const store = ww.storeFor(dict);
+                    const e = store.entriesById.get(id);
+                    return e ? schemaRoles.headwordsAllLanes(store.dictSchema, e) : [];
+                };
+                const pairs = similarityRules.ruleVerdicts(a, b, cands, {spellingsOf});
                 const headwordOf = (dict: string, id: number): string => {
                     const store = ww.storeFor(dict);
                     const e = store.entriesById.get(id);

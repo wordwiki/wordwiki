@@ -22,6 +22,7 @@
  */
 import { levenshteinDistance } from '../liminal/levenshtein-distance.ts';
 import { db } from '../liminal/db.ts';
+import { orthoMatch, type MatchGrade } from './transliterate-match.ts';
 import type { Candidate, CandidateEvidence, KeyKind } from './similarity.ts';
 
 export interface LanguageRules {
@@ -86,14 +87,15 @@ function nearSkeleton(a: string, b: string, rules: LanguageRules): boolean {
 // --- Per-entry keys from the persistent index ---------------------------------------
 // ---------------------------------------------------------------------------------
 
-export interface EntrySimKeys { skels: string[]; defs: string[]; }
+export interface EntrySimKeys { skels: string[]; defs: string[]; cskels?: string[]; }
 
 export function entrySimKeys(dictionary: string, entry_id: number): EntrySimKeys {
     const rows = db().all<{kind: KeyKind, key: string}, {d: string, e: number}>(
         `SELECT kind, key FROM similarity_key WHERE dictionary = :d AND entry_id = :e`,
         {d: dictionary, e: entry_id});
     return {skels: rows.filter(r => r.kind === 'skel').map(r => r.key),
-            defs: rows.filter(r => r.kind === 'def').map(r => r.key)};
+            defs: rows.filter(r => r.kind === 'def').map(r => r.key),
+            cskels: rows.filter(r => r.kind === 'cskel').map(r => r.key)};
 }
 
 // ---------------------------------------------------------------------------------
@@ -113,7 +115,8 @@ export interface RuleResult {
  *  The rules are ORDERED - first match wins. */
 export function ruleVerdict(probe: EntrySimKeys, target: EntrySimKeys,
                             evidence: CandidateEvidence[],
-                            rules: LanguageRules = activeRules): RuleResult {
+                            rules: LanguageRules = activeRules,
+                            spellGrade?: MatchGrade): RuleResult {
     const defOverlap = probe.defs.filter(t => target.defs.includes(t));
     const bothHaveDefs = probe.defs.length > 0 && target.defs.length > 0;
     const sharedDefEvidence = evidence.filter(ev => ev.kind === 'def');
@@ -135,6 +138,24 @@ export function ruleVerdict(probe: EntrySimKeys, target: EntrySimKeys,
                 rule: 'exact-skel+disjoint-defs'};
     }
 
+    // --- 1b. TRANSLITERATION-GRADE spelling match --------------------------------
+    // orthoMatch (transliterate-match.ts): 'exact' = a registered pair's
+    // rules produce one spelling from the other; 'candidate' = they differ
+    // by a MEASURED ambiguity branch (epenthesis, -ey/-ei, the schwa
+    // mark).  A branch is a known coin flip, not an edit-distance guess -
+    // so this outranks the near-skeleton rules below, and letter-level
+    // branches are exactly the pairs the skeleton tests above cannot see.
+    if(spellGrade === 'exact' || spellGrade === 'candidate') {
+        if(defOverlap.length > 0)
+            return {verdict: 'same-word', confidence: 'high',
+                    rule: `xlit-${spellGrade}+def-overlap`};
+        if(!bothHaveDefs)
+            return {verdict: 'same-word', confidence: 'medium',
+                    rule: `xlit-${spellGrade}+missing-defs`};
+        return {verdict: 'ambiguous', confidence: 'low',
+                rule: `xlit-${spellGrade}+disjoint-defs`};
+    }
+
     // --- 2. NEAR skeleton -------------------------------------------------------
     const near = probe.skels.some(ps => target.skels.some(ts => nearSkeleton(ps, ts, rules)));
     if(near) {
@@ -142,6 +163,20 @@ export function ruleVerdict(probe: EntrySimKeys, target: EntrySimKeys,
             return {verdict: 'same-word', confidence: 'medium',
                     rule: 'near-skel+def-overlap'};
         return {verdict: 'ambiguous', confidence: 'low', rule: 'near-skel-only'};
+    }
+
+    // --- 2b. CONSONANT skeleton ---------------------------------------------------
+    // Same consonants in order (syncope-proof: g's'talg = gisatalg) plus
+    // meaning agreement -> same word; consonants alone prove little, so
+    // without defs it only refers, and with DISJOINT defs it falls
+    // through to the weaker rules.
+    if((probe.cskels ?? []).some(c => (target.cskels ?? []).includes(c))) {
+        if(defOverlap.length > 0)
+            return {verdict: 'same-word', confidence: 'medium',
+                    rule: 'cskel+def-overlap'};
+        if(!bothHaveDefs)
+            return {verdict: 'ambiguous', confidence: 'low',
+                    rule: 'cskel+missing-defs'};
     }
 
     // --- 3. Morphology: diminutive / same stem ----------------------------------
@@ -212,10 +247,15 @@ export interface RuledPair extends RuleResult {
     score: number;
     exactSkeleton: boolean;
     evidence: CandidateEvidence[];
+    spellGrade?: MatchGrade;
 }
 
-export function ruleVerdicts(dictA: string, dictB: string,
-                             candidates: Candidate[]): RuledPair[] {
+/** A headword spelling with its orthography lane (the shape
+ *  schemaRoles.headwordsAllLanes returns). */
+export interface SpellingLane { text: string; variant: string|undefined; }
+
+export function ruleVerdicts(dictA: string, dictB: string, candidates: Candidate[],
+        opts: {spellingsOf?: (dict: string, id: number) => SpellingLane[]} = {}): RuledPair[] {
     const keyCache = new Map<string, EntrySimKeys>();
     const keysOf = (dict: string, id: number): EntrySimKeys => {
         const k = `${dict}/${id}`;
@@ -223,11 +263,33 @@ export function ruleVerdicts(dictA: string, dictB: string,
         if(!v) keyCache.set(k, v = entrySimKeys(dict, id));
         return v;
     };
-    return candidates.map(c => ({
-        ...ruleVerdict(keysOf(dictA, c.entry_id), keysOf(dictB, c.target_entry_id),
-                       c.evidence),
-        entry_id: c.entry_id, target_entry_id: c.target_entry_id,
-        score: c.score, exactSkeleton: c.exactSkeleton, evidence: c.evidence}));
+    const spellCache = new Map<string, SpellingLane[]>();
+    const spellsOf = (dict: string, id: number): SpellingLane[] => {
+        const k = `${dict}/${id}`;
+        let v = spellCache.get(k);
+        if(!v) spellCache.set(k, v = opts.spellingsOf!(dict, id));
+        return v;
+    };
+    const GRADE_ORDER: MatchGrade[] = ['none', 'skeleton', 'candidate', 'exact'];
+    const gradeOf = (aId: number, bId: number): MatchGrade|undefined => {
+        if(!opts.spellingsOf) return undefined;
+        let best: MatchGrade = 'none';
+        for(const sa of spellsOf(dictA, aId))
+            for(const sb of spellsOf(dictB, bId)) {
+                const g = orthoMatch(sa.text, sa.variant, sb.text, sb.variant).grade;
+                if(GRADE_ORDER.indexOf(g) > GRADE_ORDER.indexOf(best)) best = g;
+            }
+        return best;
+    };
+    return candidates.map(c => {
+        const spellGrade = gradeOf(c.entry_id, c.target_entry_id);
+        return {
+            ...ruleVerdict(keysOf(dictA, c.entry_id), keysOf(dictB, c.target_entry_id),
+                           c.evidence, activeRules, spellGrade),
+            entry_id: c.entry_id, target_entry_id: c.target_entry_id,
+            score: c.score, exactSkeleton: c.exactSkeleton, evidence: c.evidence,
+            spellGrade};
+    });
 }
 
 export function ruleReportMarkdown(dictA: string, dictB: string, pairs: RuledPair[],
@@ -249,6 +311,11 @@ export function ruleReportMarkdown(dictA: string, dictB: string, pairs: RuledPai
             `(${(100 * (by.get(v) ?? []).length / n).toFixed(1)}%)`),
         `- REFERRAL BAND (ambiguous -> the LLM judge, if funded): ` +
             `${(by.get('ambiguous') ?? []).length} pairs`,
+        ...(pairs.some(p => p.spellGrade !== undefined) ? [
+            `- spelling grades (orthoMatch): ` +
+            (['exact', 'candidate', 'skeleton', 'none'] as const).map(g =>
+                `${g} ${pairs.filter(p => p.spellGrade === g).length}`).join(' / ')]
+            : []),
         ``,
         `## Rule firings`,
         ...[...ruleCounts.entries()].toSorted((a, b) => b[1] - a[1])

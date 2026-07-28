@@ -30,11 +30,21 @@ test("skeleton: cross-lane collision; Rand diacritics fold; marks strip", () => 
     assertEquals(sim.skeleton("Sa'n- Pie'l", undefined), 'sanpiel');
 });
 
-test("definitionTokens: stopwords out, plurals folded, deduped", () => {
+test("definitionTokens: stopwords out, plurals + light stemming, deduped", () => {
     assertEquals(sim.definitionTokens('To prepare the stakes for setting up the frame'),
-                 ['prepare', 'stake', 'setting', 'frame']);
+                 ['prepar', 'stak', 'set', 'fram']);
     assertEquals(sim.definitionTokens('bears and a bear'), ['bear']);
     assertEquals(sim.definitionTokens('berries'), ['berry']);
+    // The audit pairs: inflections share a key now.
+    assertEquals(sim.definitionTokens('finished'), sim.definitionTokens('finish'));
+    assertEquals(sim.definitionTokens('encouraging'), sim.definitionTokens('encourage'));
+    assertEquals(sim.definitionTokens('freezing'), sim.definitionTokens('freeze'));
+});
+
+test("consonantSkeleton: syncope-proof", () => {
+    assertEquals(sim.consonantSkeleton(sim.skeleton("g's'talg", 'mm-li')),
+                 sim.consonantSkeleton(sim.skeleton('gisatalg', 'watson-li')));
+    assertEquals(sim.consonantSkeleton('elsmalatl'), 'lsmltl');
 });
 
 // Two toy dictionaries with controlled key overlap.
@@ -109,6 +119,7 @@ test("index + blocking: exact-skel forms; rare defs form; common defs corroborat
             // 'water' appears on 4 entries; with form limit 3 it may only
             // corroborate.  'kettle'/'bark' are rare - they form.
             const limits = {skel: {form: 3, corroborate: 10},
+                            cskel: {form: 0, corroborate: 0},
                             def:  {form: 3, corroborate: 10},
                             cat:  {form: 0, corroborate: 10}};
             const cands = sim.candidatePairs('sima', 'simb', {limits});
@@ -121,7 +132,7 @@ test("index + blocking: exact-skel forms; rare defs form; common defs corroborat
             // spelling relationship at all.
             const p32 = cands.find(c => c.entry_id === a3 && c.target_entry_id === b2)!;
             assert(p32 !== undefined, 'definition-formed pair');
-            assert(p32.evidence.some(ev => ev.kind === 'def' && ev.key === 'kettle'));
+            assert(p32.evidence.some(ev => ev.kind === 'def' && ev.key === 'kettl'));   // stemmed
 
             // a2 shares ONLY the common token 'water' with b2/b3/b4 - the
             // 'time' rule: corroborate-only keys never form a pair.
@@ -133,6 +144,7 @@ test("index + blocking: exact-skel forms; rare defs form; common defs corroborat
             // entries, so the form limit must sit below 3 here.)
             const self = sim.candidatePairs('simb', 'simb', {limits: {
                 skel: {form: 3, corroborate: 10},
+                cskel: {form: 0, corroborate: 0},
                 def:  {form: 2, corroborate: 10},
                 cat:  {form: 0, corroborate: 10}}});
             assert(self.every(c => c.entry_id !== c.target_entry_id), 'no self pairs');

@@ -6,12 +6,54 @@
  */
 import '../mikmaq/register.ts';   // Mi'gmaq normalizers + rules
 import { test } from "../liminal/testing/test.ts";
-import { assertEquals } from "../liminal/testing/assert.ts";
+import { assert, assertEquals } from "../liminal/testing/assert.ts";
 import * as rules from "./similarity-rules.ts";
 
 const ev = (kind: 'skel'|'def'|'cat', key: string, df: number) =>
     ({kind, key, df, weight: 1});
 const keys = (skels: string[], defs: string[]) => ({skels, defs});
+
+test("rules: consonant skeleton catches syncope", () => {
+    // gstlg == gstlg with 'eat' shared -> same-word medium.
+    assertEquals(rules.ruleVerdict(
+        {skels: ["gstalg"], defs: ['finish', 'eat'], cskels: ['gstlg']},
+        {skels: ['gisatalg'], defs: ['finish', 'eat'], cskels: ['gstlg']},
+        [ev('def', 'finish', 4)]),
+        {verdict: 'same-word', confidence: 'medium', rule: 'cskel+def-overlap'});
+    // Consonants alone with a silent side: refer, never assert.
+    assertEquals(rules.ruleVerdict(
+        {skels: ["gstalg"], defs: [], cskels: ['gstlg']},
+        {skels: ['gisatalg'], defs: ['finish'], cskels: ['gstlg']},
+        []).verdict, 'ambiguous');
+    // Disjoint meanings: cskel falls through (no same-word claim).
+    const r = rules.ruleVerdict(
+        {skels: ["gstalg"], defs: ['finish'], cskels: ['gstlg']},
+        {skels: ['gisatalg'], defs: ['doorway'], cskels: ['gstlg']},
+        []);
+    assert(r.verdict !== 'same-word', r.rule);
+});
+
+test("rules: xlit spelling grade outranks near-skeleton", () => {
+    // A candidate-grade match (a measured branch: aqan/aqn) with meaning
+    // agreement -> same-word HIGH, where near-skel alone says medium.
+    assertEquals(rules.ruleVerdict(
+        keys(['mimgwaqan'], ['drum']), keys(['mimgwaqn'], ['drum']),
+        [ev('def', 'drum', 3)], undefined, 'candidate'),
+        {verdict: 'same-word', confidence: 'high', rule: 'xlit-candidate+def-overlap'});
+    // Candidate grade, one side undefined -> same-word medium (not the
+    // near-skel-only ambiguous).
+    assertEquals(rules.ruleVerdict(
+        keys(['mimgwaqan'], []), keys(['mimgwaqn'], ['drum']),
+        [], undefined, 'candidate').verdict, 'same-word');
+    // Grade cannot rescue DISJOINT meanings: still the referral band.
+    assertEquals(rules.ruleVerdict(
+        keys(['mimgwaqan'], ['drum']), keys(['mimgwaqn'], ['doorway']),
+        [], undefined, 'exact').verdict, 'ambiguous');
+    // skeleton grade adds nothing: the ordinary rules decide.
+    assertEquals(rules.ruleVerdict(
+        keys(['abc'], ['x']), keys(['zzz'], ['y']),
+        [], undefined, 'skeleton').verdict, 'unrelated');
+});
 
 test("rules: exact skeleton - agreement, missing defs, homograph ambiguity", () => {
     // plamu/plamu with 'salmon' both sides -> same-word high.

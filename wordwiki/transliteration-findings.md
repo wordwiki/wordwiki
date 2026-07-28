@@ -514,3 +514,50 @@ are now SKIPPED by default (their per-line entries were 31,592 one-key
 blocking-noise rows, since cleared; an explicit name still indexes one),
 and the loop releases each workspace via requestWorkspaceReload before
 the next.  Full rebuild fits the default heap again.
+
+### orthoMatch wired into pairing evidence (2026-07-27)
+
+ruleVerdict gained the spelling GRADE as ordered rule 1b (between exact-
+skeleton and near-skeleton): xlit-exact/xlit-candidate + def-overlap →
+same-word HIGH; + missing-defs → medium; disjoint defs stay in the
+referral band (a grade never rescues meaning disagreement).  ruleVerdicts
+takes a spellingsOf accessor (both callers - the verdicts CLI and
+pairRandMmo - supply headwordsAllLanes), computes the best cross-product
+grade per pair, and RECORDS it on RuledPair.spellGrade; the report now
+prints the grade distribution.  The mm-targeting pairs gained an
+epenthesis candidatePattern (the aqan/aqn branch), so both shapes grade
+'candidate'.
+
+Measured on rand↔dict (59,463 candidate pairs): grades exact 4,778 /
+candidate 1 / skeleton 1,125 / none 53,559 - and ZERO verdict changes,
+for a good reason: the xlit BLOCKING keys already index both the raw and
+rule-transformed skeletons, so every single-branch pair reaches the
+exact-skeleton rule first; the grade tier upgrades nothing here.  What
+the wiring buys: the recorded grade separates rules-exact matches (4,778
+- the strongest same-word evidence in the corpus) from mere
+skeleton-equal ones for downstream consumers (planPairs confidence,
+support panels), it covers consumers with no index (the live dup-probe
+path), and multi-branch mixtures (the 1) that blocking cannot see.
+
+### cskel + stemming (2026-07-27, from the unpaired-word audit)
+
+The audit's two cheap fixes, built and measured:
+
+- **Consonant-skeleton keys** (kind 'cskel', vowels+marks stripped, >= 3
+  consonants, emitted for raw and xlit renderings; form 20 / corroborate
+  80): syncope-proof blocking - g's'talg and gisatalg finally MEET.
+  Verdict rule 2b: shared cskel + def overlap -> same-word medium;
+  + missing defs -> referral; disjoint defs fall through (consonants
+  alone claim nothing).
+- **Light def-token stemming** (-ing/-ed/-ly, silent e, doubled final,
+  after the plural fold): finish/finished, encourage/encouraging share a
+  key.  Tokens are matching keys, never display text.
+
+rand↔dict measured: candidates 59,463 → 65,919; same-word 2,988 →
+**3,584 (+20%)**; cskel+def-overlap fired 190, cskel+missing-defs sent
+335 to referral (band now 7,330).  Audit words: elsma'latl and g's'talg
+now recovered; wissugwalatl honestly remains missed - ss/sg is a
+consonant SUBSTITUTION (its 'cook' bridge sits at df 91 > form 25), the
+dialect-correspondence lever, not a syncope case.  Pairing dry run:
+plan 3,185 vs 2,679 landed (+506 new pairs, 323 multi-match worklist) -
+apply awaiting dz.

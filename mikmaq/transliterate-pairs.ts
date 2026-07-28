@@ -24,6 +24,7 @@ import { registerTransliterationPair, type CorpusPair } from '../wordwiki/transl
 import { transliterateLiToSf, transliterateCandidates,
          CANDIDATE_TRANSLITERATORS, TRANSLITERATOR_VERSION } from '../wordwiki/transliterate.ts';
 import { transliterateWsfToWli, wsfWliCandidates, wsfWliCandidatePattern,
+         wliMmliCandidatePattern, wsfMmliCandidatePattern,
          transliterateWliToMmli,
          transliterateWsfToMmli, transliterateWliToWsf,
          transliterateLiToSfViaWatson, WSF_WLI_VERSION, WLI_MMLI_VERSION,
@@ -120,6 +121,7 @@ export function registerMikmaqTransliterationPairs(): void {
         id: 'wli-mmli', sourceLane: 'watson-li', targetLane: 'mm-li',
         version: WLI_MMLI_VERSION,
         transliterate: transliterateWliToMmli,
+        candidatePattern: wliMmliCandidatePattern,
         candidateTransliterators: [
             {name: `${WLI_MMLI_VERSION} (current)`, fn: transliterateWliToMmli},
             {name: 'identity (baseline)', fn: (w) => w},
@@ -130,6 +132,7 @@ export function registerMikmaqTransliterationPairs(): void {
         id: 'wsf-mmli', sourceLane: 'watson-sf', targetLane: 'mm-li',
         version: WSF_MMLI_VERSION,
         transliterate: transliterateWsfToMmli,
+        candidatePattern: wsfMmliCandidatePattern,
         candidateTransliterators: [
             {name: `${WSF_MMLI_VERSION} (current)`, fn: transliterateWsfToMmli},
             {name: 'identity (baseline)', fn: (w) => w},

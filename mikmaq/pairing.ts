@@ -19,6 +19,7 @@
  * duplicate records), ranked by score.
  */
 import * as similarity from '../wordwiki/similarity.ts';
+import * as schemaRoles from '../wordwiki/schema-roles.ts';
 import * as rules from '../wordwiki/similarity-rules.ts';
 import { machineSync, machineSyncReportLines,
          type ComputedFact, type MachineSyncResult } from '../wordwiki/machine-sync.ts';
@@ -106,7 +107,15 @@ export function pairRandMmo(ww: WordWiki, opts: {apply?: boolean} = {}): PairRun
     const randStore = ww.storeFor(RAND_TABLE);
     const mmoStore = ww.storeFor(MMO_TABLE);
     const cands = similarity.candidatePairs(RAND_TABLE, MMO_TABLE);
-    const ruled = rules.ruleVerdicts(RAND_TABLE, MMO_TABLE, cands);
+    // orthoMatch grades (via the registered watson pairs) feed the
+    // verdict rules: a measured branch difference outranks a raw
+    // near-skeleton edit.
+    const spellingsOf = (dict: string, id: number) => {
+        const store = ww.storeFor(dict);
+        const e = store.entriesById.get(id);
+        return e ? schemaRoles.headwordsAllLanes(store.dictSchema, e) : [];
+    };
+    const ruled = rules.ruleVerdicts(RAND_TABLE, MMO_TABLE, cands, {spellingsOf});
     const plan = planPairs(ruled, {
         randRoot: randStore.dictSchema.tag,
         randEntry: randStore.dictSchema.relationFields[0].tag,
