@@ -481,3 +481,32 @@ tier; the class C/D/E signal is all medium-tier by construction
 (high-confidence pairs have identical skeletons), so the report says so
 and tells reviewers to read the pair, not just the letters.  C and D are
 the tables for Watson/Dianne.
+
+### orthoMatch: graded cross-orthography matching (2026-07-27)
+
+The registry's answer to "same form, different spelling system?", for
+pairing and the live editor dup-probe (`wordwiki/transliterate-match.ts`):
+
+    orthoMatch(a, laneA, b, laneB) → {grade, via?, rank?}
+    orthoMatches(a, laneA, b, laneB, min='candidate') → bool
+
+Grades: **exact** (the pair's rules alone produce one from the other),
+**candidate** (b is in a's AMBIGUITY set - a branch point went the other
+way; rank = which branch, 0 = preferred), **skeleton** (equal modulo
+marks, via the transliteration or the raw cross-lane floor), none.
+Both directions are tried, so the relation is symmetric; only REGISTERED
+pairs are used (compositions are registered explicitly, never inferred).
+Set membership is O(1) via the pattern→regex transform - the spec gained
+`candidatePattern` and wsf-wli provides it.  Consumers should feed the
+grade into their evidence (ruleVerdict), not collapse to bool early.
+
+The BLOCKING half: `transliteratedSkeletons()` - every spelling now also
+indexes the skeleton of its rule-rendering in each registered target lane
+(as plain 'skel' keys, so cross-lane joins need no query change).  After
+rebuild: rand 109,080 keys (the watson lanes fan out), dict 83,721;
+verified live - rand 'keknasimkewey' (wsf) indexes 'gegnasimgewei' and
+will block against modern spellings.  Ops note: similarity-rebuild now
+OOMs the default 4GB deno heap while loading randraw at current db size -
+run with DENO_V8_FLAGS=--max-old-space-size=8192 (randraw is 31,723
+entries for 31,592 useless one-key rows; excluding raw import tables from
+the index would fix both noise and memory - decision pending).

@@ -23,7 +23,8 @@ import { db } from '../liminal/db.ts';
 import { registerTransliterationPair, type CorpusPair } from '../wordwiki/transliterate-pair.ts';
 import { transliterateLiToSf, transliterateCandidates,
          CANDIDATE_TRANSLITERATORS, TRANSLITERATOR_VERSION } from '../wordwiki/transliterate.ts';
-import { transliterateWsfToWli, wsfWliCandidates, transliterateWliToMmli,
+import { transliterateWsfToWli, wsfWliCandidates, wsfWliCandidatePattern,
+         transliterateWliToMmli,
          transliterateWsfToMmli, transliterateWliToWsf,
          transliterateLiToSfViaWatson, WSF_WLI_VERSION, WLI_MMLI_VERSION,
          WSF_MMLI_VERSION, WLI_WSF_VERSION,
@@ -108,6 +109,7 @@ export function registerMikmaqTransliterationPairs(): void {
         version: WSF_WLI_VERSION,
         transliterate: transliterateWsfToWli,
         candidates: wsfWliCandidates,
+        candidatePattern: wsfWliCandidatePattern,
         candidateTransliterators: [
             {name: `${WSF_WLI_VERSION} (current)`, fn: transliterateWsfToWli},
             {name: 'identity (baseline)', fn: (w) => w},

@@ -8,6 +8,8 @@ import { assert, assertEquals } from "../liminal/testing/assert.ts";
 import "./register.ts";
 import { transliterationPair, transliterationPairFor,
          transliterationPairIds } from "../wordwiki/transliterate-pair.ts";
+import { orthoMatch } from "../wordwiki/transliterate-match.ts";
+import { transliteratedSkeletons } from "../wordwiki/similarity.ts";
 import { transliterateLiToSf } from "../wordwiki/transliterate.ts";
 
 test("mikmaq pairs: registration + the li-sf wrap", () => {
@@ -75,4 +77,23 @@ test("mikmaq pairs: the watson rules", () => {
     const lisf = transliterationPair('li-sf')!;
     assert(lisf.candidateTransliterators!.some(c => c.name.includes('via-watson')),
            'hub audit candidate registered');
+});
+
+test("orthoMatch over the real pairs", () => {
+    // Rules-exact across wsf->wli.
+    assertEquals(orthoMatch('keknasimkewey', 'watson-sf',
+                            'gegnasimgewei', 'watson-li').grade, 'exact');
+    // The schwa branch: Watson's backtick is the ranked runner-up, so a
+    // backtick spelling still MATCHES - as candidate, rank 1.
+    const m = orthoMatch('naqtɨk', 'watson-sf', 'naqt`g', 'watson-li');
+    assertEquals([m.grade, m.via, m.rank], ['candidate', 'wsf-wli', 1]);
+    // ...and the call is symmetric.
+    assertEquals(orthoMatch('naqt`g', 'watson-li', 'naqtɨk', 'watson-sf').grade,
+                 'candidate');
+    // The raw cross-lane skeleton floor (no registered rand->dict pair).
+    assertEquals(orthoMatch("sa'qati", 'rand', 'saqati', 'mm-li').grade,
+                 'skeleton');
+    // xlit blocking keys: a wsf spelling indexes its wli/mmli skeletons.
+    const keys = transliteratedSkeletons('keknasimkewey', 'watson-sf');
+    assert(keys.includes('gegnasimgewei'), keys.join(','));
 });

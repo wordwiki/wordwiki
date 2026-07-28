@@ -81,6 +81,11 @@ export function wsfWliCandidates(word: string, k = 5): string[] {
     return enumeratePattern(wsfWliPattern(wsfToWliBase(word)), k);
 }
 
+/** The same ambiguity as a Pattern, for orthoMatch's O(1) membership. */
+export function wsfWliCandidatePattern(word: string): Pattern {
+    return wsfWliPattern(wsfToWliBase(word));
+}
+
 export const WLI_WSF_VERSION = 'wli-wsf/rules-v1';
 
 /** watson-li → watson-sf: the INVERSE spoke, derived from the reversed

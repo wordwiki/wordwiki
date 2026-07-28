@@ -10,6 +10,7 @@
  * registered at the binary edges.  General code never imports them.
  */
 import type { WordWiki } from './wordwiki.ts';
+import type { Pattern } from './transliterate-pattern.ts';
 
 /** One oracle pair.  (The legacy li-sf corpus files use {li, sf} field
  *  names; loaders normalize - see normalizeCorpusPair.) */
@@ -33,6 +34,11 @@ export interface TransliterationPairSpec {
      *  beats a guess or a refusal, users can correct it, and matching can
      *  use the whole set).  Always >= 1. */
     candidates?(word: string, k?: number): string[];
+    /** The same ambiguity as a PATTERN (transliterate-pattern.ts) - lets
+     *  orthoMatch test set membership in O(1) via the regex transform
+     *  instead of enumerating.  Prefer providing this over candidates()
+     *  when the branch structure is explicit. */
+    candidatePattern?(word: string): Pattern;
     /** Rule-set variants for the harness --candidate/--all comparison
      *  (e.g. a direct mapping vs a composition through another pair). */
     candidateTransliterators?: Array<{name: string,
@@ -48,6 +54,9 @@ export function registerTransliterationPair(spec: TransliterationPairSpec): void
     pairs.set(spec.id, spec);
 }
 export function transliterationPairIds(): string[] { return [...pairs.keys()]; }
+export function allTransliterationPairs(): TransliterationPairSpec[] {
+    return [...pairs.values()];
+}
 export function transliterationPair(id: string): TransliterationPairSpec|undefined {
     return pairs.get(id);
 }
