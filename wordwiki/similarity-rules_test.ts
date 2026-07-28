@@ -13,6 +13,19 @@ const ev = (kind: 'skel'|'def'|'cat', key: string, df: number) =>
     ({kind, key, df, weight: 1});
 const keys = (skels: string[], defs: string[]) => ({skels, defs});
 
+test("referralCandidates: only the ambiguous pairs survive", () => {
+    const cand = (e: number, t: number) => ({entry_id: e, target_entry_id: t,
+        score: 1, exactSkeleton: false, evidence: []});
+    const ruledOf = (e: number, t: number, verdict: string) => ({
+        entry_id: e, target_entry_id: t, verdict, confidence: 'low', rule: 'x',
+        score: 1, exactSkeleton: false, evidence: []});
+    const cands = [cand(1, 10), cand(1, 11), cand(2, 20)];
+    const ruled = [ruledOf(1, 10, 'same-word'), ruledOf(1, 11, 'ambiguous'),
+                   ruledOf(2, 20, 'unrelated')] as any;
+    assertEquals(rules.referralCandidates(cands as any, ruled).map(c =>
+        `${c.entry_id}/${c.target_entry_id}`), ['1/11']);
+});
+
 test("rules: measured dialect correspondences", () => {
     // g<->q with meaning agreement: same-word HIGH, correspondence named.
     assertEquals(rules.ruleVerdict(

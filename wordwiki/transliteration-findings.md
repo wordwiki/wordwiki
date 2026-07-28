@@ -587,3 +587,25 @@ candidates 65,919 → 99,651; same-word 3,584 → **4,006** (+12%;
 dialect-sub+def-overlap fired 346, all named for review); referral band
 9,854.  Pairing dry run: plan 3,477 vs 3,185 landed (+292) - apply
 awaiting dz.
+
+### The referral-band filter (2026-07-28)
+
+`similarity-judge` now judges ONLY the referral band by default: it runs
+the pass-1a rules first (same spellingsOf grades as the verdicts CLI),
+keeps the pairs ruled 'ambiguous' (`referralCandidates`), and clusters
+those.  Measured on rand↔dict: **9,854 of 99,651 candidate pairs in
+7,781 clusters** - the model is spent on exactly the 10% the rules
+refuse to decide.  `--all` keeps the judge-everything behavior for
+evals.  The console line prints pairs + clusters (= LLM calls) before
+any spend; `--sample=0` is a free dry run of the band computation.
+MEASURED by the 50-cluster pilot (2026-07-28, Opus, report
+watson/rand-mmo-judge-band-sample.md): 48 paid calls, 71,032 in / 6,938
+out tokens → ~1,480 in / ~145 out per cluster → full band (7,781
+clusters) ≈ 11.5M in / 1.1M out = **~$260 Opus / ~$50 Sonnet** (86%
+agreement).  The band is RICH: of 57 pairs judged, **28 same-word (20
+high)** / 13 related / 16 unrelated - ~49% same-word, and the reasons
+are exactly the synonym-bridge tier ('regard'↔'think highly of',
+'evil-favored'↔'ugly', 'stopple/plug/cork', la prison loan).  Naive
+extrapolation: ~4,800 same-word pairs waiting in the band (sampling
+caveat: first-50 clusters, not random).  1 failed cluster, retryable
+free.

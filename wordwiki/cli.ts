@@ -1107,7 +1107,7 @@ export async function cliMain(args: string[]): Promise<void> {
             const exitCode = await security.runSystem(async () => {
                 ww.ensureNewStyleTables();
                 const a = args[1] && !args[1].startsWith('--') ? args[1]
-                    : panic('usage: similarity-judge <dictA> <dictB> [--sample=N] [--model=] [--details=]');
+                    : panic('usage: similarity-judge <dictA> <dictB> [--all] [--sample=N] [--model=] [--details=]');
                 const b = args[2] && !args[2].startsWith('--') ? args[2]
                     : panic('similarity-judge needs two dictionaries');
                 const flag = (name: string) =>
@@ -1124,8 +1124,26 @@ export async function cliMain(args: string[]): Promise<void> {
                                           usage.outTok += u.outputTokens; usage.calls++; },
                 };
                 const cands = similarity.candidatePairs(a, b);
+                // DEFAULT: judge only the REFERRAL BAND - the pairs the
+                // pass-1a rules marked ambiguous.  The rules-decided pairs
+                // cost no model time (the economics rule); --all keeps the
+                // judge-everything behavior for evals.
+                let toJudge = cands;
+                if(!args.includes('--all')) {
+                    const spellingsOf = (dict: string, id: number) => {
+                        const store = ww.storeFor(dict);
+                        const e = store.entriesById.get(id);
+                        return e ? schemaRoles.headwordsAllLanes(store.dictSchema, e) : [];
+                    };
+                    const ruled = similarityRules.ruleVerdicts(a, b, cands, {spellingsOf});
+                    toJudge = similarityRules.referralCandidates(cands, ruled);
+                    console.info(`referral band: ${toJudge.length} of ${cands.length} ` +
+                                 `candidate pairs in ` +
+                                 `${new Set(toJudge.map(c => c.entry_id)).size} clusters ` +
+                                 `(= LLM calls; --all judges everything)`);
+                }
                 const r = await similarityJudge.judgeCandidates(
-                    cfg, ww.storeFor(a), ww.storeFor(b), cands,
+                    cfg, ww.storeFor(a), ww.storeFor(b), toJudge,
                     {model: flag('model'),
                      sampleClusters: flag('sample') ? Number(flag('sample')) : undefined});
                 const headwordOf = (dict: string, id: number): string => {

@@ -335,6 +335,15 @@ export function ruleVerdicts(dictA: string, dictB: string, candidates: Candidate
     });
 }
 
+/** The REFERRAL BAND as candidates: only the pairs pass 1a judged
+ *  'ambiguous' - the confined spend surface for the LLM judge (the
+ *  rules-decided pairs need no model). */
+export function referralCandidates(candidates: Candidate[], ruled: RuledPair[]): Candidate[] {
+    const amb = new Set(ruled.filter(p => p.verdict === 'ambiguous')
+        .map(p => `${p.entry_id}/${p.target_entry_id}`));
+    return candidates.filter(c => amb.has(`${c.entry_id}/${c.target_entry_id}`));
+}
+
 export function ruleReportMarkdown(dictA: string, dictB: string, pairs: RuledPair[],
                                    headwordOf: (dict: string, id: number) => string,
                                    opts: {sample?: number} = {}): string {
