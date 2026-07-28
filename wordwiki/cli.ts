@@ -58,6 +58,7 @@ import { getWordWiki, createAllTables } from './wordwiki.ts';
 import * as transcribe from './transcribe.ts';
 import * as pageTranscribe from './page-transcribe.ts';
 import * as clarkImport from '../mikmaq/clark-import.ts';
+import * as pdmSegment from '../mikmaq/pdm-segment.ts';
 import { buildPublishSource, buildAllPublishSources, publishSourceFromJson, publishSourceToPublicJson, writeFullHistoryDump } from './publish-source.ts';
 
 export async function cliMain(args: string[]): Promise<void> {
@@ -1448,6 +1449,39 @@ export async function cliMain(args: string[]): Promise<void> {
                 console.info(added.length > 0
                     ? `'${target}': added workflow relation(s) ${added.join(', ')}`
                     : `'${target}': workflow relations already present`);
+            });
+            Deno.exit(0);
+            break;
+        }
+
+        // PDM SEGMENTATION PILOT (mikmaq/pdm-segment.ts;
+        // pdm-import-survey.md step 1): score LLM page-structure
+        // resolution against the hand Tagging groups.  READ-ONLY; cached.
+        //   ./wordwiki.sh pdm-segment-pilot [--pages=...] [--report=...]
+        case 'pdm-segment-pilot': {
+            const argOf = (name: string, dflt: string) =>
+                args.find(a => a.startsWith(`--${name}=`))?.slice(name.length + 3) ?? dflt;
+            const pages = argOf('pages', '4,40,67,101,172,209,250,324,435,550')
+                .split(',').map(Number);
+            const models = argOf('models', 'claude-sonnet-5,claude-opus-4-8').split(',');
+            const task = argOf('task', 'group') as 'group'|'starts';
+            const gold = argOf('gold', 'merged') as 'hand'|'merged';
+            const reportPath = argOf('report',
+                task === 'starts' ? '../pdm/segment-pilot-v3.md' : '../pdm/segment-pilot.md');
+            await security.runSystem(async () => {
+                ww.ensureNewStyleTables();
+                await pdmSegment.segmentPilot({pages, models, reportPath, task, gold});
+            });
+            Deno.exit(0);
+            break;
+        }
+
+        // Zero-LLM ceiling sweep for the PDM segmentation clustering.
+        //   ./wordwiki.sh pdm-segment-sweep
+        case 'pdm-segment-sweep': {
+            security.runSystem(() => {
+                ww.ensureNewStyleTables();
+                console.info(pdmSegment.ceilingSweep());
             });
             Deno.exit(0);
             break;
