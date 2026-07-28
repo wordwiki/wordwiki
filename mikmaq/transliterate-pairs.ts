@@ -23,6 +23,7 @@ import { db } from '../liminal/db.ts';
 import { registerTransliterationPair, type CorpusPair } from '../wordwiki/transliterate-pair.ts';
 import { transliterateLiToSf, transliterateCandidates,
          CANDIDATE_TRANSLITERATORS, TRANSLITERATOR_VERSION } from '../wordwiki/transliterate.ts';
+import { PM_LI_VERSION, transliteratePmToLi, pmLiCandidates, pmLiPattern } from './pacifique-transliterate.ts';
 import { transliterateWsfToWli, wsfWliCandidates, wsfWliCandidatePattern,
          wliMmliCandidatePattern, wsfMmliCandidatePattern,
          transliterateWliToMmli,
@@ -55,6 +56,48 @@ function randBothLanesCorpus(_ww: WordWiki): {pairs: CorpusPair[], notes?: strin
         pairs.push({source: r.sf, target: r.li, tag: 'rand-both-lanes'});
     }
     return {pairs};
+}
+
+/** PDM ref gold headword pairs: the hand rtr (Pacifique transcription)
+ *  vs rtl (Listuguj) first tokens.  Cleaning: leading parentheticals
+ *  stripped, up-to-comma, inner parens removed; pairs with FRENCH
+ *  accents in the source (gloss leakage - the rtr sometimes leads with
+ *  the French) rejected.  ~1,000 pairs. */
+function pdmRefCorpus(_ww: WordWiki): {pairs: CorpusPair[], notes?: string[]} {
+    const rows = db().all<{rtr: string, rtl: string}, Record<string, never>>(
+        `SELECT (SELECT t.attr1 FROM dict t WHERE t.ty='rtr' AND t.id3=r.id
+                   AND t.valid_to=${EOT} AND t.attr1<>'' LIMIT 1) AS rtr,
+                (SELECT t.attr1 FROM dict t WHERE t.ty='rtl' AND t.id3=r.id
+                   AND t.valid_to=${EOT} AND t.attr1<>'' LIMIT 1) AS rtl
+           FROM dict r JOIN bounding_group bg ON r.attr1 = bg.bounding_group_id
+           WHERE r.ty='ref' AND r.valid_to=${EOT} AND bg.document_id =
+                 (SELECT document_id FROM scanned_document
+                  WHERE friendly_document_id='PDM')`, {});
+    const headword = (s: string|null): string|undefined => {
+        if(!s) return undefined;
+        let t = s.trim();
+        if(t.startsWith('(')) t = t.replace(/^[\s(]*[^)]*\)\s*/, '');
+        t = t.split(/[,;]/)[0].replace(/\([^)]*\)/g, '').trim();
+        if(t === '' || t.split(/\s+/).length > 3) return undefined;
+        return t;
+    };
+    const seen = new Set<string>();
+    const pairs: CorpusPair[] = [];
+    let rejected = 0;
+    for(const r of rows) {
+        const a = headword(r.rtr), b = headword(r.rtl);
+        if(!a || !b) continue;
+        // French gloss leakage: accented source, or an English-looking target.
+        if(/[éèêëàâîïôûùç]/.test(a) || /\b(the|into|of|and)\b/i.test(b)) { rejected++; continue; }
+        // One orthographic mark, two codepoints in the hand data: fold
+        // curly apostrophes to ASCII on both sides.
+        const na = a.replace(/[\u2019\u02bc]/g, "'"), nb = b.replace(/[\u2019\u02bc]/g, "'");
+        const k = `${na} ${nb}`;
+        if(seen.has(k)) continue;
+        seen.add(k);
+        pairs.push({source: na, target: nb, tag: 'pdm-ref'});
+    }
+    return {pairs, notes: [`${rejected} gloss-leak pair(s) rejected`]};
 }
 
 /** The landed counterpart pairs as a watson-li -> mm-li corpus,
@@ -153,5 +196,17 @@ export function registerMikmaqTransliterationPairs(): void {
             return {pairs: pairs.map(p =>
                 ({source: p.target, target: p.source, tag: p.tag})), notes};
         },
+    });
+    registerTransliterationPair({
+        id: 'pm-li', sourceLane: 'mm-pm', targetLane: 'mm-li',
+        version: PM_LI_VERSION,
+        transliterate: transliteratePmToLi,
+        candidates: pmLiCandidates,
+        candidatePattern: pmLiPattern,
+        candidateTransliterators: [
+            {name: `${PM_LI_VERSION} (current)`, fn: transliteratePmToLi},
+            {name: 'identity (baseline)', fn: (w) => w},
+        ],
+        extractCorpus: pdmRefCorpus,
     });
 }

@@ -32,6 +32,8 @@ import { loadLlm, LlmUsage } from "../liminal/llm.ts";
 import { extractStage, ExtractConfig, ExtractRecipe, ExtractStage,
          ExtractImageSource } from "../liminal/extract.ts";
 import { levenshteinDistance } from "../liminal/levenshtein-distance.ts";
+import { transliterationPairFor } from './transliterate-pair.ts';
+import { llmRetry } from './page-transcribe.ts';
 import { diffValues } from './diff.ts';
 import { renderToStringViaLinkeDOM } from '../liminal/markup.ts';
 import { selectBoundingBoxesForGroup, selectScannedPage } from './scanned-document.ts';
@@ -144,7 +146,8 @@ async function containCmd(targetResultPath: string, sourceImagePath: string,
 // next eval - the ONLY cost of a prompt iteration.
 export const PROMPT_VERSION_TRANSCRIBE = 3;   // v3: explain the masked image
 export const PROMPT_VERSION_EXPAND = 3;       // v3: explain the masked image
-export const PROMPT_VERSION_TRANSLITERATE = 2; // v2: runs input + corpus-mined correspondences
+export const PROMPT_VERSION_TRANSLITERATE = 3; // v3: per-word RULES DRAFT from the
+                                               // derived pm-li pair (registry lookup)
 
 const AMBIGUITY_RULES = block`
 /**/If you are genuinely unsure between readings, DO NOT silently pick one:
@@ -282,7 +285,18 @@ function transliterateStage(): ExtractStage {
         imageBox: 1600,
         schema: textStageSchema('transliteration',
             'French translated to English; Mi\'gmaq converted to Listuguj orthography'),
-        prompt: (input: any) => block`
+        prompt: (input: any) => {
+            // The DERIVED rules pass (mikmaq pm-li pair, registered at the
+            // binary edge; 30% exact / 34% top-4 on holdout): its output is
+            // a per-word mechanical DRAFT the model corrects - the
+            // systematic replacement for v2's hand-picked examples.
+            const pair = transliterationPairFor('mm-pm', 'mm-li');
+            const drafts = (input?.runs ?? [])
+                .filter((r: TaggedRun) => r.lang === 'mm')
+                .flatMap((r: TaggedRun) => r.text.split(/[\s,;]+/))
+                .filter((wd: string) => wd !== '')
+                .map((wd: string) => `${wd} -> ${pair ? pair.transliterate(wd) : wd}`);
+            return block`
 /**/Below is the expanded transcription of one entry from Father Pacifique's
 /**/handwritten Mi'gmaq-French dictionary, as language-tagged runs
 /**/(word⟨mm⟩ = Mi'gmaq in Pacifique's orthography, word⟨fr⟩ = French,
@@ -300,6 +314,11 @@ function transliterateStage(): ExtractStage {
 /**/  tj -> j; g before t/p often -> q; ā -> a'; oe -> we/ue; word-final
 /**/  -em -> -m (vowel dropped); an unstressed initial vowel may take an
 /**/  apostrophe (aptepogoei -> apt'puguei).
+/**/  A MECHANICAL rules draft of each ⟨mm⟩ word (corpus-derived; right
+/**/  ~30% of the time and usually close - Pacifique does not write vowel
+/**/  length, so length apostrophes are often missing from it):
+/**/    ${drafts.join(';  ')}
+/**/  Correct the draft where it is wrong; do not follow it blindly.
 /**/- ⟨cit⟩ runs: copy VERBATIM, unchanged (citations like "(Pi. Met.)",
 /**/  "(Jo. 368)" are references, never translated).
 /**/- If the input contains [a|b] ambiguity markers or ⁇, carry the
@@ -309,7 +328,8 @@ function transliterateStage(): ExtractStage {
 /**/${CONFIDENCE_RULES}
 /**/
 /**/Expanded transcription (tagged runs):
-/**/${runsToTagged(input?.runs)}`,
+/**/${runsToTagged(input?.runs)}`;
+        },
     };
 }
 
@@ -588,7 +608,16 @@ export async function transcribeEval(opts: TranscribeEvalOptions): Promise<void>
         let input: unknown = null;
         let priorText = '';
         for(const stage of recipe) {
-            const out: any = await extractStage(cfg, crop, 0, stage, input);
+            let out: any;
+            try {
+                out = await llmRetry(() => extractStage(cfg, crop, 0, stage, input));
+            } catch(e) {
+                // A persistently malformed response is a FINDING, not a
+                // crash: log, skip the ref's remaining stages.
+                log(`  [${i+1}/${items.length}] ref ${item.ref_id} stage ${stage.name}: ` +
+                    `FAILED (${e instanceof Error ? e.message.slice(0, 90) : e})`);
+                break;
+            }
             input = out;
             const field = STAGE_FIELD[stage.name];
             // Stages 1-2 return language-tagged RUNS; the final stage is flat.
@@ -626,6 +655,7 @@ export async function transcribeEval(opts: TranscribeEvalOptions): Promise<void>
         log(`  [${i+1}/${items.length}] ref ${item.ref_id} group ${item.bounding_group_id}: ` +
             recipe.map(st => {
                 const r = stages[st.name];
+                if(!r) return `${st.name}=FAILED`;
                 return `${st.name}=${r.sim !== undefined ? (r.sim*100).toFixed(0)+'%' : '-'}` +
                        `(c${r.confidence})`;
             }).join(' '));
@@ -667,6 +697,7 @@ export async function transcribeEval(opts: TranscribeEvalOptions): Promise<void>
             for(const stage of recipe) {
                 const field = STAGE_FIELD[stage.name];
                 const st = r.stages[stage.name];
+                if(!st) { md.push(`**${stage.name}** FAILED (malformed response)`); md.push(''); continue; }
                 const hand = r.item.hand[field];
                 md.push(`**${stage.name}** ` +
                         (st.sim !== undefined ? `(similarity ${(st.sim*100).toFixed(0)}%, ` : '(') +
