@@ -10,6 +10,13 @@ set -e
 # whole migration against the latest V1 data - and will run it ONCE FOR REAL
 # on the production V2 target at cutover.
 #
+# NO-AI PROOF MODE (dz 2026-07-28): `touch <instance>/no-llm-calls` before
+# running (the flag file lives in the run cwd, beside the credential file;
+# LIMINAL_NO_LLM=1 works too) and any ACTUAL LLM work throws loudly, naming
+# the model + prompt.  Cache hits never reach the guard - so a re-run in a
+# fresh container over a SHARED CONTENT STORE that completes under the flag
+# is PROOF the migration is fully cache-served, zero AI spend.
+#
 #   ./importWordWikiV1Db.sh                           # rehearsal: pull + migrate
 #   ./importWordWikiV1Db.sh --no-pull                 # migrate the db already here
 #   ./importWordWikiV1Db.sh --no-pull --allow-production

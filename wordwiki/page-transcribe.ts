@@ -29,11 +29,12 @@ import { containedImageSource } from './transcribe.ts';
 
 const EOT = 9007199254740991;
 
-// Bump to re-transcribe / re-interpret on the next run - the only cost of
-// a prompt iteration (stale extractions are unreachable, not deleted).
-export const PROMPT_VERSION_BAND_TRANSCRIBE = 1;
-export const PROMPT_VERSION_ENTRY_INTERPRET = 1;
-export const TRANSCRIBE_MODEL = 'claude-opus-4-8';
+// The per-band facts a transcription stage's prompt receives (they ride
+// extractStage's `input`, so they are part of the cache key).  The stage
+// PROMPTS themselves are book/language-specific and live with the project
+// package (mikmaq/clark-import.ts) - dz's packaging rule.
+export interface BandInput { book: string; printed: number; column: string;
+                             expectedLines: number; }
 
 // List prices, for the survey's printed cost line only.
 function usdPerMtok(model: string): {inTok: number, outTok: number} {
@@ -256,114 +257,6 @@ export const bandCropImageSource = containedImageSource('derived/band-crops-cont
 // --- The stages -------------------------------------------------------------------
 // ---------------------------------------------------------------------------------
 
-// Physical facts only: glyphs, diacritics, style.  Language tagging,
-// entry boundaries and meaning are layer 2 - and the model never sees
-// expected spellings (checker, not primer).  The per-band facts
-// (expected line count, position context) travel in `input` so they are
-// part of the cache key.
-export interface BandInput { book: string; printed: number; column: string;
-                             expectedLines: number; }
-
-const AMBIGUITY_RULES = block`
-/**/If you are genuinely unsure between readings, DO NOT silently pick one:
-/**/write the alternatives in square brackets separated by | (e.g. "wen[j|y]awe"
-/**/means the letter could be j or y).  Use ⁇ for a truly illegible character.
-/**/Use these sparingly - only where you are actually unsure.`;
-
-const CONFIDENCE_RULES = block`
-/**/Also return "confidence": an integer 0-100, your overall confidence that
-/**/your transcription is correct (100 = certain).  Be honest - this number
-/**/is used to decide which results need human review.`;
-
-export function bandTranscribeStage(model = TRANSCRIBE_MODEL): ExtractStage {
-    return {
-        name: 'band-transcribe',
-        model,
-        promptVersion: PROMPT_VERSION_BAND_TRANSCRIBE,
-        imageBox: 1600,
-        schema: {
-            type: 'object',
-            properties: {
-                lines: {type: 'array', items: {type: 'string'},
-                        description: 'one string per printed line, in order'},
-                confidence: {type: 'integer', description: 'overall confidence 0-100'},
-            },
-            required: ['lines', 'confidence'],
-        },
-        prompt: (input: unknown) => {
-            const b = input as BandInput;
-            return block`
-/**/You are transcribing a band of consecutive lines from one column of a
-/**/printed 1902 Mi'kmaq dictionary page (${b.book}, printed page ${b.printed},
-/**/${b.column} column).  The orthography is Rand-style, using diacritics such
-/**/as ā ē ī ō ū â ĕ ŏ ŭ and apostrophes.  The image shows ${b.expectedLines}
-/**/printed lines.
-/**/
-/**/Transcribe EXACTLY what is printed, letter for letter:
-/**/- return exactly one output line per printed line, in order
-/**/  (${b.expectedLines} lines);
-/**/- preserve every diacritic exactly as printed; do not normalize,
-/**/  modernize or correct spellings;
-/**/- wrap italic text in *...* (in this book headwords and Mi'kmaq words
-/**/  are typically italic, English roman - but record what the TYPE shows,
-/**/  not what you expect);
-/**/- keep punctuation, capitalization, parentheses and end-of-line
-/**/  hyphenation exactly as printed; never join or re-wrap lines;
-/**/- transcribe the physical text only: do not interpret, translate,
-/**/  complete or expand anything.
-/**/${AMBIGUITY_RULES}
-/**/${CONFIDENCE_RULES}`;
-        },
-    };
-}
-
-// Layer-2 TASTE stage for the survey: read one assembled entry as the
-// intelligent reader and pull out the structure the soft schema will
-// need.  Text-only (extractTextStage) - iterating this is nearly free.
-export function entryInterpretStage(model = TRANSCRIBE_MODEL): ExtractStage {
-    return {
-        name: 'clark-entry-interpret',
-        model,
-        promptVersion: PROMPT_VERSION_ENTRY_INTERPRET,
-        imageBox: 0,
-        schema: {
-            type: 'object',
-            properties: {
-                headword: {type: 'string', description: 'the entry headword, markup removed'},
-                alt_spellings: {type: 'array', items: {type: 'string'},
-                                description: 'alternate spellings given for the headword, e.g. parenthesized variants'},
-                glosses: {type: 'array', items: {type: 'string'},
-                          description: 'English senses of the headword itself'},
-                derivatives: {type: 'array', items: {type: 'object', properties: {
-                                  form: {type: 'string'}, gloss: {type: 'string'}},
-                              required: ['form', 'gloss']},
-                              description: 'embedded related Mi\'kmaq forms with their own glosses'},
-                cross_refs: {type: 'array', items: {type: 'string'},
-                             description: 'references to other words, entries or texts, verbatim'},
-                notes: {type: 'array', items: {type: 'string'},
-                        description: 'dialect / usage / place-name / editorial notes, verbatim'},
-                confidence: {type: 'integer'},
-            },
-            required: ['headword', 'glosses', 'confidence'],
-        },
-        prompt: (input: unknown) => {
-            const {entryText} = input as {entryText: string};
-            return block`
-/**/Below is a faithful transcription of ONE entry from Clark's 1902 Mi'kmaq
-/**/dictionary (italics are wrapped in *...*; [a|b] marks an uncertain
-/**/reading; line breaks are the printed line breaks - rejoin hyphenated
-/**/words).  The prose assumes an intelligent reader: glosses, embedded
-/**/derivative forms, cross-references ("cf. ...", "See ..."), dialect and
-/**/place-name notes may all be mixed together.  Extract the structure.
-/**/Quote Mi'kmaq forms EXACTLY as transcribed, diacritics intact.
-/**/
-/**/ENTRY:
-/**/${entryText}
-/**/${CONFIDENCE_RULES}`;
-        },
-    };
-}
-
 // ---------------------------------------------------------------------------------
 // --- Entry assembly (stage C) -----------------------------------------------------
 // ---------------------------------------------------------------------------------
@@ -374,7 +267,10 @@ export function entryInterpretStage(model = TRANSCRIBE_MODEL): ExtractStage {
 export function isHeaderLine(textractText: string): boolean {
     const t = textractText.trim();
     if(/^[A-Z]{1,4}$/.test(t)) return true;
-    return t.length <= 10 && /\d/.test(t) && /^[^A-Za-z]*\d+[^A-Za-z]*$/.test(t);
+    if(t.length <= 10 && /\d/.test(t) && /^[^A-Za-z]*\d+[^A-Za-z]*$/.test(t)) return true;
+    // Page numbers with digit-confusable textract misreads ('I5' for 15,
+    // '2I' for 21) - short digit islands where every letter is I/l/O.
+    return t.length <= 6 && /\d/.test(t) && /^[0-9IlO\-–—=/. ]+$/.test(t);
 }
 
 /** Diacritic-PRESERVING fold for cross-model divergence detection (the
@@ -420,7 +316,10 @@ export async function llmRetry<T>(fn: () => Promise<T>): Promise<T> {
         try { return await fn(); }
         catch(e) {
             const msg = e instanceof Error ? e.message : String(e);
-            const transient = /429|529|overloaded|rate.?limit|timeout|ECONN|network/i.test(msg);
+            // Schema mismatches are retryable too: an occasional response
+            // drops a required field, and a fresh call (nothing invalid is
+            // ever cached) almost always validates.
+            const transient = /429|529|overloaded|rate.?limit|timeout|ECONN|network|does not match schema/i.test(msg);
             if(!transient || attempt >= delays.length) throw e;
             await new Promise(res => setTimeout(res, delays[attempt]));
         }
@@ -442,9 +341,18 @@ async function columnModelLines(cfg: ExtractConfig, geom: PageGeom, colLines: Pa
         const crop = await bandCropPath(geom.image_ref, band);
         const input: BandInput = {book, printed: geom.printed, column,
                                   expectedLines: band.lines.length};
-        const got: string[] =
-            ((await llmRetry(() => extractStage(cfg, crop, 0, stage, input)) as any)?.lines ?? [])
-            .map(String);
+        let got: string[];
+        try {
+            got = ((await llmRetry(() => extractStage(cfg, crop, 0, stage, input)) as any)?.lines ?? [])
+                .map(String);
+        } catch(e) {
+            // A band that still fails after retries degrades to textract
+            // fallback for its lines (visible as 'dropped' in the stats) -
+            // one bad band must not kill a book-length run.
+            console.info(`  band-transcribe FAILED (p${geom.printed} ${column} y=${band.y}, ` +
+                         `${stage.model}): ${e instanceof Error ? e.message : e}`);
+            return;
+        }
         for(const p of alignFolded(band.lines.map(l => fold(l.text)), got.map(fold)))
             if(p.t !== undefined && p.l !== undefined) out[bases[bi] + p.t] = got[p.l];
     }));
@@ -528,7 +436,11 @@ export interface SurveyOptions {
     interpretPerPage: number;      // layer-2 taste entries per page
     reportPath: string;
     jsonPath?: string;             // per-line aligned data (model comparisons)
-    model?: string;
+    // The stages are the book/language-specific half (prompts, models,
+    // versions) - built by the caller (the CLI binary edge, from the
+    // project package).
+    transcribeStage: ExtractStage;
+    interpretStage: ExtractStage;
     log?: (msg: string) => void;
 }
 
@@ -559,17 +471,17 @@ export async function transcribeSurvey(opts: SurveyOptions): Promise<void> {
             usage.set(stageName, t);
         },
     };
-    const tStage = bandTranscribeStage(opts.model);
-    const iStage = entryInterpretStage(opts.model);
+    const tStage = opts.transcribeStage;
+    const iStage = opts.interpretStage;
     const rand = randFoldIndex();
     const json: SurveyJson = {book: opts.book, model: tStage.model,
-                              promptVersion: PROMPT_VERSION_BAND_TRANSCRIBE, pages: []};
+                              promptVersion: tStage.promptVersion, pages: []};
 
     const report: string[] = [];
     report.push(`# ${opts.book} layer-1 transcription survey`);
     report.push('');
-    report.push(`Pages ${opts.pages.join(', ')}; band-transcribe v${PROMPT_VERSION_BAND_TRANSCRIBE}, ` +
-                `entry-interpret v${PROMPT_VERSION_ENTRY_INTERPRET}, model ${tStage.model}.`);
+    report.push(`Pages ${opts.pages.join(', ')}; band-transcribe v${tStage.promptVersion}, ` +
+                `entry-interpret v${iStage.promptVersion}, model ${tStage.model}.`);
     report.push(`Line scoring compares diacritic-FOLDED LLM lines against the (accent-stripped) ` +
                 `textract lines - it checks reading fidelity, NOT diacritic fidelity ` +
                 `(that needs the stage-B hand reference).`);

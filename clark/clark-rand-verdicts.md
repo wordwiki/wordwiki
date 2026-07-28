@@ -1,107 +1,109 @@
 # Similarity pass 1a (language rules v3): 'clark' -> 'rand'
 
-- pairs: 8213
-- same-word: 371 (4.5%)
-- related: 2766 (33.7%)
-- unrelated: 4610 (56.1%)
-- ambiguous: 466 (5.7%)
-- REFERRAL BAND (ambiguous -> the LLM judge, if funded): 466 pairs
-- spelling grades (orthoMatch): exact 0 / candidate 0 / skeleton 241 / none 7972
+- pairs: 58933
+- same-word: 4563 (7.7%)
+- related: 13698 (23.2%)
+- unrelated: 35248 (59.8%)
+- ambiguous: 5424 (9.2%)
+- REFERRAL BAND (ambiguous -> the LLM judge, if funded): 5424 pairs
+- spelling grades (orthoMatch): exact 0 / candidate 0 / skeleton 3415 / none 55518
 
 ## Rule firings
-- single-common-token: 4610
-- possible-synonym: 1942
-- root-family: 323
-- multi-def-overlap: 301
-- rare-def-only: 206
-- weak-root-family: 200
-- near-skel+def-overlap: 182
-- near-skel-only: 152
-- exact-skel+def-overlap: 127
-- exact-skel+disjoint-defs: 107
-- cskel+def-overlap: 31
-- dialect-sub+def-overlap: 24
-- exact-skel+missing-defs: 7
-- cskel+missing-defs: 1
+- single-common-token: 35248
+- possible-synonym: 9064
+- near-skel-only: 2956
+- near-skel+def-overlap: 2015
+- root-family: 1924
+- exact-skel+disjoint-defs: 1714
+- exact-skel+def-overlap: 1712
+- weak-root-family: 1569
+- multi-def-overlap: 1127
+- rare-def-only: 695
+- cskel+def-overlap: 409
+- dialect-sub+def-overlap: 366
+- exact-skel+missing-defs: 61
+- cskel+missing-defs: 59
+- lexicon-root: 10
+- same-stem: 4
 
 ## same-word (sample)
-- **amasiksenoogowokun** -> **amsasigsnugowaqan** [high; exact-skel+def-overlap]
+- **uktcebetooimtulnakun** -> **gjipituimtlnaqn** [high; exact-skel+def-overlap]
+- **niktooiktcētckul** -> **nigtuigji'jg** [high; exact-skel+def-overlap]
+- **nabedabokteskigun** -> **napitapoqtestign** [high; exact-skel+def-overlap]
+- **nookwiltcugētc** -> **nugwiljagej** [high; exact-skel+def-overlap]
+- **uktcekabedestakun** -> **gjigapitestaqn** [high; exact-skel+def-overlap]
+- **ukskwiskalsoode** -> **gsgwisgalsuti** [high; exact-skel+def-overlap]
+- **elminskadāsinumugāwa** -> **elminsgatesinmgewei** [medium; near-skel+def-overlap]
+- **pitkwealasoodumâkun** -> **pitgwia'sutmaqn** [high; exact-skel+def-overlap]
+- **pitkwelooskunâkun** -> **pitgwelusgnuaqan** [medium; cskel+def-overlap]
+- **malkopskadigun** -> **malgopsgatign** [high; exact-skel+def-overlap]
+- **neganik-tcije-tegāwēnoo** -> **nianigjijitege'winu** [high; exact-skel+def-overlap]
+- **kesitāwotkoogwek** -> **gesitewatgugweg** [high; exact-skel+def-overlap]
+- **peskoonadektāsinskāk** -> **pesgunateg_te'sinsga'q** [medium; near-skel+def-overlap]
+- **peskoonadektāsinskāk** -> **te'sinsga'q** [medium; near-skel+def-overlap]
+- **kulumooetcwôpsk** -> **glmuejuopsg** [high; exact-skel+def-overlap]
+- **elseguniguntcētc** -> **elsegnignji'j** [medium; near-skel+def-overlap]
+- **keweswosk** -> **giwesuasg** [high; exact-skel+def-overlap]
+- **peskwesowoodimk** -> **pesgwesawu'timg** [high; exact-skel+def-overlap]
+- **tciktceloojadegā** -> **jigjeluja'teget** [high; exact-skel+def-overlap]
+- **pewipskwesigun** -> **pewipsgwesign** [high; exact-skel+def-overlap]
+- **weksitpaktesk** -> **wesgitpaqtesuatl** [high; exact-skel+def-overlap]
+- **tumutckegwētc** -> **tm`jgigwej** [high; exact-skel+def-overlap]
 - **amalegunoktcētc** -> **amalignoqji'j** [medium; near-skel+def-overlap]
+- **sēgooeboogwistakun** -> **siguipugwistaqan** [high; exact-skel+def-overlap]
 - **aptcetckumootc** -> **apji'jgmuj** [high; exact-skel+def-overlap]
-- **aptcetckumootc** -> **apji'jgmuj** [high; exact-skel+def-overlap]
-- **aooneskwokteskum** -> **ewnisgwaqtesg`g** [high; exact-skel+def-overlap]
-- **abajipkwodelak** -> **apajipgwateluatl** [high; exact-skel+def-overlap]
-- **amtcukunigun** -> **amjaqanign** [high; exact-skel+def-overlap]
-- **aktcegadamakun** -> **aqijkatamaqn** [high; exact-skel+def-overlap]
-- **aktcegadamakun** -> **aqjigatamaqan** [high; exact-skel+def-overlap]
-- **amâltcugwetc** -> **amaljugwej** [medium; near-skel+def-overlap]
-- **aooneskwēbelakn** -> **ewnisgwepilaqan** [medium; cskel+def-overlap]
-- **ajiptcoödakun** -> **ajipju'taqan** [high; exact-skel+def-overlap]
-- **amtcimlooskeā** -> **amjimlusge'g** [high; exact-skel+def-overlap]
-- **alukoojooiktesk** -> **alaqujuigtesg** [high; exact-skel+def-overlap]
-- **ajeoktcemin** -> **ajiaqjimin** [high; exact-skel+def-overlap]
-- **adooaskwedēsin** -> **atuasgwetesing** [high; exact-skel+def-overlap]
-- **amjaboktc** -> **amjapoqj** [high; exact-skel+def-overlap]
-- **apskwegēdum** -> **apsgwegitg** [high; exact-skel+def-overlap]
-- **abiktantegā** -> **apigtanteget** [high; exact-skel+def-overlap]
-- **akumkwesin** -> **aqamgwesing** [high; exact-skel+def-overlap]
-- **apkwiltcasi** -> **apgwilja'sit** [medium; near-skel+def-overlap]
-- **aktcekopelàkun** -> **aqijgopilaqan** [medium; near-skel+def-overlap]
-- **amtcimlooskeā** -> **amjimlugiet** [high; exact-skel+def-overlap]
-- **aktcekopelum** -> **aqijgopilg** [medium; near-skel+def-overlap]
-- **amaltēlmakun** -> **amaltelmaqan** [medium; near-skel+def-overlap]
 
 ## related (sample)
+- **nalkwugadoo** -> **nelagwa'toq** [low; weak-root-family; possibly shared root]
+- **megogumkujētc** -> **nespipaqan** [low; multi-def-overlap; shared meaning]
+- **mesaltoogooā** -> **mesaltoqwe'g** [medium; root-family; shared root]
+- **peskoolmiskaluk** -> **pasglmisga'latl** [low; multi-def-overlap; shared meaning]
+- **usogumasoogwā** -> **sugmsugwet** [low; multi-def-overlap; shared meaning]
+- **wādumī** -> **watign** [low; weak-root-family; possibly shared root]
+- **elowegadasē** -> **elawika'teket** [medium; root-family; shared root]
+- **elowegadasē** -> **elawiga'teget** [medium; root-family; shared root]
+- **kijikskabudī** -> **gisigsgapite'g** [low; multi-def-overlap; shared meaning]
+- **sokwodabē** -> **soqwatepa'sit** [medium; root-family; shared root]
+- **meowlagwet** -> **milawiagwet** [low; multi-def-overlap; shared meaning]
+- **muskulugunabase** -> **mimsgulugnipit** [low; multi-def-overlap; shared meaning]
+- **pegwagitoo** -> **pegwaqiteget** [medium; root-family; shared root]
+- **mestegesasegāwā** -> **mestaqisasigewei** [low; weak-root-family; possibly shared root]
+- **nebeloktāgunaget** -> **nipelaqtaqniget** [medium; root-family; shared root]
+- **nebeloktāgunaget** -> **nipelaqtaqmiget** [medium; root-family; shared root]
+- **kegoolekwāmat** -> **gigli'gwemit** [low; weak-root-family; possibly shared root]
 - **aboogiskunadām** -> **apugistaqane'g** [medium; root-family; shared root]
-- **ametcijekekgumagādoo** -> **jijigoqnaq`g** [low; multi-def-overlap; shared meaning]
-- **algoojogun** -> **algojug'g** [low; weak-root-family; possibly shared root]
+- **kakamudām** -> **gisnm'te'g** [low; multi-def-overlap; shared meaning]
+- **pādulkik** -> **pe'tlg** [low; multi-def-overlap; shared meaning]
 - **ankaptēgā** -> **angapt'g** [medium; root-family; shared root]
+- **booktowsum** -> **pugtewteg** [medium; root-family; shared root]
+- **epsimkāwā** -> **epsimgewei** [medium; root-family; shared root]
 - **amâlaboksumit** -> **amalapugsmit** [medium; root-family; shared root]
-- **ametcijekekgumagādoo** -> **tegoqmaq** [low; multi-def-overlap; shared meaning]
-- **ametcijekekgumagādoo** -> **pitaqamag'g** [low; multi-def-overlap; shared meaning]
-- **abeajetckabik** -> **tapiajijgapi** [low; multi-def-overlap; shared meaning]
-- **apteekooneet** -> **pagitnet** [low; possible-synonym; possible synonym]
-- **adooksē** -> **a'tugwet** [medium; root-family; shared root]
-- **adooksē** -> **aqnutmet** [low; multi-def-overlap; shared meaning]
-- **alogoojokut** -> **algoju'gatl** [low; multi-def-overlap; shared meaning]
-- **ajikpumedādum** -> **gepmite'tg** [low; multi-def-overlap; shared meaning]
-- **amaloksowā** -> **eloqsawet** [low; multi-def-overlap; shared meaning]
-- **aktalooksēt** -> **ujulusgieg** [low; multi-def-overlap; shared meaning]
-- **aboodegadase** -> **aputega'teget** [medium; root-family; shared root]
-- **apkwiltcasi** -> **pegwilja'sit** [low; multi-def-overlap; shared meaning]
-- **amtcukudejimk bulgoktc iktook** -> **amjaqatejimatl** [medium; root-family; shared root]
-- **āladejadusē** -> **elm'tga'teget** [low; multi-def-overlap; shared meaning]
-- **anabapskitk** -> **winapsgitg** [low; multi-def-overlap; shared meaning]
-- **aktamkeā** -> **wajuamga'toq** [low; multi-def-overlap; shared meaning]
-- **aktamkeā** -> **wajuamga'teget** [low; multi-def-overlap; shared meaning]
-- **aktamkeā** -> **wajuamga'lsit** [low; multi-def-overlap; shared meaning]
-- **aktamkeā** -> **wajuamga'latl** [low; multi-def-overlap; shared meaning]
-- **apskwegēdum** -> **apsgwegimatl** [medium; root-family; shared root]
+- **ulnoojētc** -> **nnuej** [low; multi-def-overlap; shared meaning]
 
 ## ambiguous (sample)
+- **kēneskwotpamakun** -> **ginisgwatpmaqan** [low; exact-skel+disjoint-defs]
+- **nooje-abajipkwodelegā** -> **nujiapajipgwateliget** [low; exact-skel+disjoint-defs]
+- **neganik-tcije-tegāwēnoo** -> **niganigjijitege'winu** [low; exact-skel+disjoint-defs]
+- **neganik-tcije-tegāwēnoo** -> **niganigjijitege'winu** [low; exact-skel+disjoint-defs]
+- **neganik-tcije-tegāwēnoo** -> **niganigjijitege'winu** [low; exact-skel+disjoint-defs]
+- **neganik-tcije-tegāwēnoo** -> **niganigjijitege'winu** [low; exact-skel+disjoint-defs]
+- **bētooinikskamijenakik** -> **pituinigsgamijinaq** [low; near-skel-only]
+- **ejakunjedestakun** -> **ejaqanjetestaqan** [low; exact-skel+disjoint-defs]
+- **wepkoomakunogwom** -> **wepgumaqano'guom** [low; exact-skel+disjoint-defs]
+- **wepkoomakunogwom** -> **wepgumagno'guom** [low; exact-skel+disjoint-defs]
+- **tcinpagoontesk** -> **jinpaquntesg** [low; exact-skel+disjoint-defs]
+- **tcinpagoontestoo** -> **jinpaquntestoq** [low; exact-skel+disjoint-defs]
+- **tcinpagoontestoo** -> **jinpaquntestoq** [low; exact-skel+disjoint-defs]
 - **Apsetkwetck** -> **Apsetgwejg** [low; exact-skel+disjoint-defs]
-- **amiktcijēdegā** -> **amigjijiteget** [low; exact-skel+disjoint-defs]
-- **abootckodasik** -> **apujgotas'g** [low; exact-skel+disjoint-defs]
-- **amasogopskool** -> **amasoqopsgw** [low; exact-skel+disjoint-defs]
-- **aktcekopelàkun** -> **agijgopilaqan** [low; near-skel-only]
-- **aktcekopelàkun** -> **akijkopilaqn** [low; near-skel-only]
-- **amtcimlooskeā** -> **amjimlusgiet** [low; exact-skel+disjoint-defs]
-- **aooneskwebēlum** -> **ewnisgwapil'g** [low; near-skel-only]
-- **adagaltigul** -> **ataqaltig** [low; exact-skel+disjoint-defs]
-- **amiktcijēdoo** -> **amigjijitoq** [low; exact-skel+disjoint-defs]
-- **abooikpedesk** -> **apuigpetesg** [low; exact-skel+disjoint-defs]
-- **abooikpagunegā** -> **apuigpaqamiget** [low; exact-skel+disjoint-defs]
-- **amaskwibunâk** -> **amasgwipne'g** [low; near-skel-only]
-- **àkabuskadakun** -> **aqapisga'taqan** [low; near-skel-only]
-- **apjikslet** -> **apjigslet** [low; exact-skel+disjoint-defs]
-- **altestakun** -> **altestaqan** [low; exact-skel+disjoint-defs]
-- **amselāwistoo** -> **amsele'wistoq** [low; exact-skel+disjoint-defs]
-- **amuspegitk** -> **amuspegitg** [low; near-skel-only]
-- **agunoodumumkāwā** -> **agnutm'gewei** [low; exact-skel+disjoint-defs]
-- **aktcegadek** -> **aqjigateg** [low; exact-skel+disjoint-defs]
-- **amasebagwek** -> **amasipaqweg** [low; exact-skel+disjoint-defs]
-- **agunoodumâkun** -> **aqnutmaqn** [low; exact-skel+disjoint-defs]
-- **alaktēgāwenoo** -> **elaqtege'winu** [low; exact-skel+disjoint-defs]
-- **aptcinpei** -> **apjinpe'g** [low; exact-skel+disjoint-defs]
-- **akamkwesin** -> **aqamgwesing** [low; near-skel-only]
+- **keseoolkwijālooek** -> **gesiulgwija'lueg** [low; exact-skel+disjoint-defs]
+- **upskunakunemoose** -> **psgnaqnimusi** [low; exact-skel+disjoint-defs]
+- **keskoobalegowk** -> **gesgupaligowg** [low; exact-skel+disjoint-defs]
+- **wenmajetabloomk** -> **wenmajit'plumatl** [low; near-skel-only]
+- **pegwodāwolsāwe** -> **pegwate'ulsewit** [low; exact-skel+disjoint-defs]
+- **noojipkotumodegā** -> **nujipgotmateget** [low; exact-skel+disjoint-defs]
+- **tegwodabaktek** -> **tigwatapaqteg** [low; exact-skel+disjoint-defs]
+- **esnepitkumadum** -> **esnipitgmat'g** [low; exact-skel+disjoint-defs]
+- **wenmajīlsoomajul** -> **wenmaji'lsumatl** [low; near-skel-only]
+- **kedooôpsumoodulk** -> **getuapsmutlatl** [low; exact-skel+disjoint-defs]
+- **uksiktugedādakun** -> **gsigt'gite'gn** [low; exact-skel+disjoint-defs]
 

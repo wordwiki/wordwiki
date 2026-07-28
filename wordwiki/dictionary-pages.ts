@@ -56,12 +56,12 @@ export function editorAppFor(base: WordWiki, store: DictionaryStore): LexemeEdit
         get lexicalForms() { return base.lexicalForms; },
         get categories() { return base.categories; },
         get lexemeOps() { return ops ??= new LexemeOps(facade); },
-        // The custom Tags/Log sections are the DEFAULT dictionary's feature
-        // (wordwiki.renderLexemeWorkflow reads the default store); a facade
-        // dictionary renders none - its generic rows are suppressed only
-        // when its schema declares the workflow roles, which then deserve
-        // the real sections (a listed residual).
-        renderLexemeWorkflow: (_entry_id: number) => [],
+        // The Tags/Log sections, generalized by role (dz 2026-07-28):
+        // the shared surface over THIS dictionary's store; renders nothing
+        // when the schema has no workflow relations (see
+        // ensure-workflow-relations).
+        renderLexemeWorkflow: (entry_id: number) =>
+            base.renderLexemeWorkflow(entry_id, store.assertionTable),
     };
     return facade;
 }
@@ -111,9 +111,35 @@ export class DictionaryPages {
     private wordUrl(id: number): string {
         return `/ww/wordwiki.dicts.${this.table}.word(${id})`;
     }
+    /** The STANDARD editor for this dictionary: the generalized META editor
+     *  (metaEditPage) - never the classic look, whose renderers are typed
+     *  to the default dictionary (dz's 'No spellings' rand report). */
+    private editUrl(id: number): string {
+        return `/ww/wordwiki.dicts.${this.table}.lexeme.metaEditPage(${id})`;
+    }
+    /** A word row: navigate on the row, pencil-only edit (the house list
+     *  recipe). */
+    private wordRow(id: number, content: Markup): Markup {
+        return ['div', {class: 'list-group-item d-flex align-items-center gap-2'},
+            ['a', {...templates.pageLinkProps(this.wordUrl(id)),
+                   class: 'flex-grow-1 text-decoration-none'}, content],
+            templates.pencilLink(this.editUrl(id))];
+    }
+
+    /** The dictionary's search form (shared by home and the search page):
+     *  a plain GET, so the URL carries the query. */
+    private searchForm(searchText = ''): Markup {
+        return ['form', {method: 'get', class: 'row g-2 align-items-center mb-3',
+                         action: `/ww/wordwiki.dicts.${this.table}.search(query)`},
+            ['div', {class: 'col-auto'},
+             ['input', {type: 'text', class: 'form-control', name: 'searchText',
+                        placeholder: `Search ${this.displayName}…`, value: searchText}]],
+            ['div', {class: 'col-auto'},
+             ['button', {type: 'submit', class: 'btn btn-outline-primary'}, 'Search']]];
+    }
 
     /** The dictionary's browsable word list: every current entry, sorted by
-     *  its headword, each row navigating to the word view. */
+     *  its headword, letter-indexed, each row navigating to the word view. */
     @route(authenticated)
     home(): templates.Page {
         const schema = this.store.dictSchema;
@@ -127,6 +153,16 @@ export class DictionaryPages {
         const mirrorSource = dictionaryConfig.readConfigValue(this.table, 'import_mirror') === 'true'
             ? (dictionaryConfig.readConfigValue(this.table, 'import_source') ?? 'an SFM import')
             : undefined;
+        // Letter groups (fold-first-letter), for the jump index a
+        // book-sized list needs.
+        const letterOf = (t: string) =>
+            (t.normalize('NFD').replace(/\p{Mark}/gu, '').toLowerCase()
+                .match(/[a-z]/)?.[0] ?? '#');
+        const groups = new Map<string, typeof rows>();
+        for(const r of rows) {
+            const l = letterOf(r.text);
+            (groups.get(l) ?? groups.set(l, []).get(l)!).push(r);
+        }
         const body: Markup = ['div', {class: 'container py-3'},
             ['h1', {}, this.displayName],
             ['p', {class: 'text-muted small'},
@@ -136,14 +172,65 @@ export class DictionaryPages {
             mirrorSource === undefined ? undefined :
                 ['div', {class: 'alert alert-info py-2'},
                  `Import mirror of ${mirrorSource} — edits belong in the transformed dictionary, not here.`],
+            this.searchForm(),
+            groups.size > 1
+                ? ['p', {}, [...groups.keys()].map(l =>
+                    ['a', {href: `#letter-${l}`, class: 'me-2 text-decoration-none'},
+                     l.toUpperCase()])]
+                : undefined,
             rows.length === 0
                 ? ['p', {class: 'text-muted'}, 'No words yet.']
-                : ['div', {class: 'list-group lm-list'},
-                   rows.map(r => ['a',
-                       {...templates.pageLinkProps(this.wordUrl(r.id)),
-                        class: 'list-group-item list-group-item-action'},
-                       r.text])]];
-        return templates.page(title, body);
+                : [...groups.entries()].map(([l, rs]) => [
+                    ['h5', {id: `letter-${l}`, class: 'mt-3'}, l.toUpperCase()],
+                    ['div', {class: 'list-group lm-list'},
+                     rs.map(r => this.wordRow(r.id, r.text))]])];
+        return templates.page(title, body, {dictionary: this.table});
+    }
+
+    /** Generic search over THIS dictionary: diacritic/case-insensitive
+     *  substring over every spelling lane (headword roles + source-
+     *  orthography texts) and every gloss. */
+    @route(authenticated)
+    search(query?: {searchText?: string}|string): templates.Page {
+        // Reached both ways: .search(query) from the GET form (querystring
+        // object, the searchPage convention) and .search("...") direct.
+        const searchText = typeof query === 'string' ? query : (query?.searchText ?? '');
+        const schema = this.store.dictSchema;
+        const pk = schema.relationFields[0].primaryKeyField.name;
+        const fold = (s: string) => s.normalize('NFD').replace(/\p{Mark}/gu, '')
+            .toLowerCase().replace(/[^a-z0-9 ]/g, '');
+        const q = fold(searchText ?? '').trim();
+        const LIMIT = 300;
+        const hits: {id: number, text: string, gloss: string}[] = [];
+        let total = 0;
+        if(q !== '') {
+            for(const e of this.store.entries as any[]) {
+                const spellings = [
+                    ...schemaRoles.headwordsAllLanes(schema, e).map(h => h.text),
+                    ...schemaRoles.sourceOrthographyTexts(schema, e).map(h => h.text)];
+                const glosses = schemaRoles.glossTexts(schema, e);
+                if([...spellings, ...glosses].some(t => fold(t ?? '').includes(q))) {
+                    total++;
+                    if(hits.length < LIMIT)
+                        hits.push({id: e[pk],
+                                   text: schemaRoles.headwordFallback(schema, e)?.text
+                                         ?? `(entry ${e[pk]})`,
+                                   gloss: glosses[0] ?? ''});
+                }
+            }
+        }
+        const body: Markup = ['div', {class: 'container py-3'},
+            ['h1', {}, `Search ${this.displayName}`],
+            this.searchForm(searchText ?? ''),
+            q === ''
+                ? ['p', {class: 'text-muted'}, 'Type a word or part of a gloss.']
+                : ['p', {class: 'text-muted small'},
+                   `${total} match(es)${total > LIMIT ? ` — first ${LIMIT} shown` : ''}`],
+            ['div', {class: 'list-group lm-list'},
+             hits.map(h => this.wordRow(h.id,
+                 [['b', {}, h.text],
+                  h.gloss ? ['span', {class: 'text-muted'}, ` — ${h.gloss}`] : undefined]))]];
+        return templates.page(`Search ${this.displayName}`, body, {dictionary: this.table});
     }
 
     /** One word, read-only, rendered generically from the dictionary's own
@@ -156,6 +243,13 @@ export class DictionaryPages {
             ? (schemaRoles.headwordFallback(schema, e)?.text ?? `entry ${id}`)
             : `entry ${id}`;
         const body: Markup = ['div', {class: 'container py-3'},
+            // The standard pencil (house recipe: detail pages carry the
+            // pencil).  Just the pencil - the meta renderer below draws the
+            // entry heading itself (all lanes); a second title line here
+            // duplicated it (dz).
+            e === undefined ? undefined :
+                ['div', {class: 'd-flex justify-content-end'},
+                 templates.pencilLink(this.editUrl(id))],
             e === undefined
                 ? ['p', {class: 'text-muted'}, 'Word not found.']
                 : ['div', {class: 'page-content'},
@@ -182,7 +276,11 @@ export class DictionaryPages {
             ['p', {class: 'mt-3'},
              ['a', {...templates.pageLinkProps(
                  `/ww/wordwiki.dicts.${this.table}.home()`)},
-              `← All ${this.displayName} words`]]];
-        return templates.page(title, body);
+              `← All ${this.displayName} words`]],
+            // The workflow surface (Tags + Log + the capture dock) - same
+            // one-way-everywhere rule as the MMO word view.
+            e === undefined ? undefined
+                : this.base.renderLexemeWorkflow(id, this.table)];
+        return templates.page(title, body, {dictionary: this.table});
     }
 }

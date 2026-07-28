@@ -125,3 +125,20 @@ test("AnthropicLlm.extract: model falls back to defaultModel; errors when neithe
     const noDefault = new AnthropicLlm({apiKey: 'k'}, fakeFetch);
     await assertRejects(() => noDefault.extract('', 'p', IMG, SCHEMA), Error, 'no model');
 });
+
+test("no-llm-calls proof mode: any actual LLM work throws (env + flag file)", async () => {
+    const llm = new AnthropicLlm({apiKey: 'sk-test'},
+        (() => { throw new Error('fetch must never run in proof mode'); }) as unknown as typeof fetch);
+    // Env form.
+    Deno.env.set('LIMINAL_NO_LLM', '1');
+    try {
+        await assertRejects(() => llm.extract('m', 'a prompt', IMG, SCHEMA),
+                            Error, 'AI call blocked');
+    } finally { Deno.env.delete('LIMINAL_NO_LLM'); }
+    // Flag-file form (created in the run cwd, like the credential file).
+    await Deno.writeTextFile('no-llm-calls', '');
+    try {
+        await assertRejects(() => llm.extract('m', 'a prompt', IMG, SCHEMA),
+                            Error, 'no-llm-calls');
+    } finally { await Deno.remove('no-llm-calls'); }
+});

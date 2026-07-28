@@ -75,6 +75,7 @@ import * as templates from './templates.ts';
 import * as category from './category.ts';
 import * as lexicalForm from './lexical-form.ts';
 import * as entrySchema from './entry-schema.ts';
+import * as schemaRoles from './schema-roles.ts';
 import * as orthographyTable from './orthography.ts';
 import { WILD_VARIANT_NAME } from './variant-policy.ts';
 import * as tagTable from './tag.ts';
@@ -703,6 +704,28 @@ export class LexemeEditor {
     // --- Page + fragments ----------------------------------------------------
     // ------------------------------------------------------------------------
 
+    /** NON-DEFAULT dictionaries: a fact whose whole history is the imported
+     *  base set (machine authors, no human events) is SETTLED, not pending
+     *  - the review's pure-import rule, applied to every pending
+     *  classification (machine-contributors-design.md: machine-owned facts
+     *  are frozen, not queued).  The DEFAULT dictionary keeps its behavior:
+     *  there, machine-pending facts ARE the auto-transliteration queue. */
+    private factExemptFromApproval(versions: ReadonlyArray<{assertion: Assertion}>): boolean {
+        return this.app.assertionTable !== 'dict'
+            && versions.every(v => isImportedEvent(v.assertion));
+    }
+
+    /** The entry's spelling summary in THIS dictionary's OWN schema.  The
+     *  typed entrySchema summary reads the DEFAULT dictionary's schema and
+     *  lanes, so on any other dictionary it rendered 'No spellings' (dz's
+     *  rand report) - the schema-roles path is the generalized one. */
+    private entryHeading(e: any): string {
+        if(this.app.assertionTable === 'dict')
+            return entrySchema.renderEntrySpellingsSummary(e);
+        return schemaRoles.headwordsAllLanes(this.app.dictSchema, e)
+            .map(h => h.text).join('/');
+    }
+
     @route(authenticated)
     entryPage(entry_id: number, mode: EditMode = 'edit',
               since: number = 0, view: string = ''): templates.Page | server.Response {
@@ -720,7 +743,7 @@ export class LexemeEditor {
                 `${this.R}.entryPage(${entry_id},'${mode}',${t}${view ? `,'${view}'` : ''})`);
         }
         const e = this.app.entriesById.get(entry_id);
-        const title = e ? entrySchema.renderEntrySpellingsSummary(e) : `Entry ${entry_id}`;
+        const title = e ? this.entryHeading(e) : `Entry ${entry_id}`;
         // view 'full': open review as the FULL HISTORY (everyone, from
         // creation) - the title clock's target; a review sitting with
         // nothing pending is otherwise an empty page.
@@ -740,7 +763,7 @@ export class LexemeEditor {
         const entryTuple = this.entryTuple(entry_id);
         const q = new CurrentTupleQuery(entryTuple);
         const e = this.app.entriesById.get(entry_id);
-        const heading = e ? entrySchema.renderEntrySpellingsSummary(e) : `Entry ${entry_id}`;
+        const heading = e ? this.entryHeading(e) : `Entry ${entry_id}`;
 
         const opts = this.reviewOpts(participant, full, since);
         const hxGet = mode === 'review'
@@ -904,7 +927,7 @@ export class LexemeEditor {
     @route(authenticated)
     metaEditPage(entry_id: number, changes: boolean = false): templates.Page {
         const e = this.app.entriesById.get(entry_id);
-        const title = e ? entrySchema.renderEntrySpellingsSummary(e) : `Entry ${entry_id}`;
+        const title = e ? this.entryHeading(e) : `Entry ${entry_id}`;
         return templates.page(title, [this.renderMetaEntry(entry_id, changes),
                                       // The Tags + Log sections + the capture
                                       // dock, same as the read view (dz: one
@@ -1386,7 +1409,8 @@ export class LexemeEditor {
                 // unapproved addition/edit (publication-model.md).
                 const review = classifyFact(q.src.tupleVersions.map(v => v.assertion),
                                             timestamp.END_OF_TIME);
-                const pending = review.state === 'added' || review.state === 'edited';
+                const pending = !this.factExemptFromApproval(q.src.tupleVersions)
+                    && (review.state === 'added' || review.state === 'edited');
                 // View-changes mode: the dot, opened up - an added row gets
                 // the changelog's chip, an edited row its old value inline on
                 // the SAME line ("was: ..."), never an indented history level.
@@ -1662,6 +1686,10 @@ export class LexemeEditor {
         const content: Pending[] = [], deletions: Pending[] = [];
         this.entryTuple(entry_id).forEachVersionedTuple(t => {
             if(t.tupleVersions.length === 0) return;
+            // Without this exemption, every rand/clark fact showed as
+            // unapproved and the automated authors even lit the
+            // approve-auto-transliterations button (dz 2026-07-28).
+            if(this.factExemptFromApproval(t.tupleVersions)) return;
             const review = classifyFact(t.tupleVersions.map(v => v.assertion),
                                         timestamp.END_OF_TIME);
             if(review.state === 'added' || review.state === 'edited')
@@ -1813,7 +1841,8 @@ export class LexemeEditor {
         // what still carries an unaccepted change.  (publication-model.md)
         const review = classifyFact(tq.src.tupleVersions.map(v => v.assertion),
                                     timestamp.END_OF_TIME);
-        const pending = review.state === 'added' || review.state === 'edited';
+        const pending = !this.factExemptFromApproval(tq.src.tupleVersions)
+            && (review.state === 'added' || review.state === 'edited');
         return (
             ['div', {class: `-fact-${fact_id}- lm-editable d-flex align-items-start `
                             + `${pending ? 'lm-pending-fact ' : ''}${extraClasses}`,
@@ -2112,7 +2141,7 @@ export class LexemeEditor {
         // this single-lexeme view, but it makes a line self-identifying so the
         // SAME list works unchanged in a multi-lexeme / global feed).
         const e = this.app.entriesById.get(entry_id);
-        const headword = e ? entrySchema.renderEntrySpellingsSummary(e) : `Entry ${entry_id}`;
+        const headword = e ? this.entryHeading(e) : `Entry ${entry_id}`;
         entryTuple.forEachVersionedTuple(t => {
             if(t.tupleVersions.length === 0) return;
             if(opts.participant !== 'everyone'

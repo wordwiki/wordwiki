@@ -95,6 +95,33 @@ export function loadLlm(appName: string, fetchImpl: typeof fetch = fetch): Llm {
 // --- The Anthropic implementation -------------------------------------------------
 // ---------------------------------------------------------------------------------
 
+// --- The no-LLM-calls guard (dz 2026-07-28) ---------------------------------
+//
+// Proof mode for cache-complete pipelines: with the flag file
+// `no-llm-calls` in the run directory (beside the credential file) - or
+// LIMINAL_NO_LLM=1 - any ACTUAL LLM work throws.  The guard sits at the
+// api-call site, so cache hits (which never reach the client) pass and a
+// full migration can be re-run elsewhere to CONFIRM it spends nothing.
+// Client construction stays allowed - only doing work is blocked.
+export const NO_LLM_FLAG_FILE = 'no-llm-calls';
+
+export function llmCallsDisabled(): string|undefined {
+    try { Deno.statSync(NO_LLM_FLAG_FILE); return `flag file ./${NO_LLM_FLAG_FILE}`; }
+    catch { /* no flag file */ }
+    if(Deno.env.get('LIMINAL_NO_LLM') === '1') return 'LIMINAL_NO_LLM=1';
+    return undefined;
+}
+
+/** Throw if LLM/AI work is disabled for this run.  `context` names the
+ *  would-be call for the error (model, stage, ...) - the whole point of
+ *  the mode is a LOUD, identifiable failure. */
+export function assertLlmCallsAllowed(context: string): void {
+    const why = llmCallsDisabled();
+    if(why !== undefined)
+        throw new Error(`AI call blocked (${why}): ${context} - this run is asserting ` +
+                        `that all AI work is served from cache`);
+}
+
 export class AnthropicLlm implements Llm {
     readonly available = true;
     constructor(private cred: AnthropicCredential,
@@ -102,6 +129,8 @@ export class AnthropicLlm implements Llm {
 
     async extract(model: string, prompt: string, image: LlmImage|undefined,
                   schema: Record<string, unknown>, opts: LlmExtractOptions = {}): Promise<unknown> {
+        assertLlmCallsAllowed(`llm extract, model ${model || this.cred.defaultModel}, ` +
+                              `prompt '${prompt.slice(0, 80)}…'`);
         const useModel = model || this.cred.defaultModel;
         if(!useModel) throw new Error('llm: no model given and no defaultModel configured');
         const body = buildAnthropicRequest(useModel, prompt, image, schema, opts);

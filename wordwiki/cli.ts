@@ -57,7 +57,7 @@ import { normalizeShoeboxDates } from './creation-dates.ts';
 import { getWordWiki, createAllTables } from './wordwiki.ts';
 import * as transcribe from './transcribe.ts';
 import * as pageTranscribe from './page-transcribe.ts';
-import * as clarkImport from './clark-import.ts';
+import * as clarkImport from '../mikmaq/clark-import.ts';
 import { buildPublishSource, buildAllPublishSources, publishSourceFromJson, publishSourceToPublicJson, writeFullHistoryDump } from './publish-source.ts';
 
 export async function cliMain(args: string[]): Promise<void> {
@@ -1400,8 +1400,12 @@ export async function cliMain(args: string[]): Promise<void> {
             const model = argOf('model', '') || undefined;
             await security.runSystem(async () => {
                 ww.ensureNewStyleTables();
+                // The stages (prompts, models) are the project-specific half
+                // - built here at the binary edge from the mikmaq package.
                 await pageTranscribe.transcribeSurvey({book, pages, interpretPerPage,
-                                                       reportPath, jsonPath, model});
+                    reportPath, jsonPath,
+                    transcribeStage: clarkImport.bandTranscribeStage(model),
+                    interpretStage: clarkImport.entryInterpretStage(model)});
             });
             Deno.exit(0);
             break;
@@ -1427,6 +1431,23 @@ export async function cliMain(args: string[]): Promise<void> {
             await security.runSystem(async () => {
                 ww.ensureNewStyleTables();
                 await clarkImport.importClark({pages, reportPath});
+            });
+            Deno.exit(0);
+            break;
+        }
+
+        // Copy the DEFAULT dictionary's workflow relations (tag+log,
+        // roles included) into another dictionary's schema so the shared
+        // Tags/Log surface works there.  Idempotent.
+        //   ./wordwiki.sh ensure-workflow-relations <dict>
+        case 'ensure-workflow-relations': {
+            const target = args[1] ?? panic('usage: ensure-workflow-relations <dict>');
+            security.runSystem(() => {
+                ww.ensureNewStyleTables();
+                const added = dictionaryConfig.ensureWorkflowRelations(target);
+                console.info(added.length > 0
+                    ? `'${target}': added workflow relation(s) ${added.join(', ')}`
+                    : `'${target}': workflow relations already present`);
             });
             Deno.exit(0);
             break;

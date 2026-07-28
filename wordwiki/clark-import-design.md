@@ -178,10 +178,34 @@ landed rand->mcp hub already.  clark->dict direct stays small by design
 over-detection (junk fragment entries), interpretation confidence <70 on
 ~11%.
 
-Stage D - freeze + full run: layer-1 prompt frozen, run printed 1-172,
-interpret, land, join.  Grammar + place-name sections are OUT OF SCOPE
-for the dictionary import (revisit later; place-names may be their own
-prize).
+Stage D - freeze + full run: DONE 2026-07-28 (generation 5).  Printed
+1-172: 6,694 entries / 37,715 assertions; 7,659 glosses, 2,049
+derivatives, 232 cross-refs, 794 notes; 162 cross-column/page joins; 524
+headers skipped; 1,019 dual-model divergent lines flagged; 1 interpret
+failure, 331 low-confidence, 4 empty fragments skipped.  Run hardening:
+llmRetry covers schema-mismatch responses, and a band that still fails
+degrades to textract fallback instead of killing the run.
+JOIN (full book): clark->rand same-word 4,563 pairs (referral band
+5,424); 27.6% of clark entries collide exact-skeleton with rand; 8.7%
+(583 entries) already reach MMO through the landed rand->mcp hub.
+clark->dict direct 281 same-word.  Review-band prep (dev-band review
+2026-07-28): interpret v2 fixed the ending-as-headword class (91
+'endings:' notes); residual junk ~0.5% fragment entries.
+Grammar + place-name sections remain OUT OF SCOPE (place-names may be
+their own prize).
+
+POST-STAGE-D refinements (dz review, 2026-07-28): the verbatim
+transcription now NESTS inside the documentReference ('rtr', rand's
+convention - a detached sibling was not a win); the Clark-SPECIFIC code
+(schema, importer, stage prompts) moved to mikmaq/clark-import.ts per
+the packaging rule - wordwiki/page-transcribe.ts keeps only the
+book-generic machinery and takes the stages as parameters; the shared
+Tags/Log workflow surface is generalized by role
+(ensure-workflow-relations copies the default dictionary's tag+log
+relation shapes; the workflow verbs/fragments carry a dict parameter),
+and clark's mirror wipe PRESERVES human 'tdo'/'log' rows across
+re-imports (content-keyed entry ids keep them attached; changed entries
+orphan them visibly).
 
 ## Interaction with the deferred LLM runs
 

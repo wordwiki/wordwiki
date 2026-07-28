@@ -1,15 +1,14 @@
-# Clark import (stage C dev band, generation 3)
+# Clark import (stage C dev band, generation 4)
 
 Pages 1-25; primary claude-sonnet-5, gate claude-opus-4-8, interpret claude-sonnet-5.
 
-- entries: 881 (5163 assertions)
-- glosses 1055, derivatives 360, cross-refs 53, notes 69
-- headers skipped: 72; column/page joins: 30
-- dual-model divergent lines: 163 (flagged in-band on their entries); primary dropped 45 (textract fallback)
-- interpret failures: 1; low-confidence (<70): 103
+- entries: 879 (5078 assertions)
+- glosses 995, derivatives 343, cross-refs 51, notes 149
+- headers skipped: 75; column/page joins: 31
+- dual-model divergent lines: 163 (flagged in-band on their entries); primary dropped 42 (textract fallback)
+- interpret failures: 2; low-confidence (<70): 59; empty fragments skipped: 1
 - id collisions (re-salted): 0
 
 ## Usage (actual API spend this run; cache hits free)
 
-- band-transcribe: 12 calls, 31608 in / 3375 out
-- clark-entry-interpret: 376 calls, 451765 in / 51545 out
+- clark-entry-interpret: 879 calls, 1314952 in / 107947 out

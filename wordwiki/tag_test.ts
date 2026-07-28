@@ -76,7 +76,7 @@ test("Tags ☰: prompt_on_add tag opens the dialog pre-filled; self-contained ad
         assertStringIncludes(html,
             "wordwiki.lexeme.insertDialog(1000, 1000, 'tdo', null, null, 'edit', &quot;FollowUp&quot;)");
         // Self-contained: an immediate add (no dialog).
-        assertStringIncludes(html, 'wordwiki.addTag(1000, &quot;NeedsRecording&quot;)');
+        assertStringIncludes(html, 'wordwiki.addTag(1000, &quot;NeedsRecording&quot;, &quot;dict&quot;)');
         assert(!html.includes("insertDialog(1000, 1000, 'tdo', null, null, 'edit', &quot;NeedsRecording&quot;)"),
                'self-contained tag does not open the dialog');
     });

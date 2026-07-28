@@ -199,3 +199,34 @@ export function discoverDictionaries(): string[] {
             .map(t => t.slice(0, -'_dict_config'.length));
     } catch(_e) { return []; }
 }
+
+/** Copy the DEFAULT dictionary's workflow relations (the tag 'tdo' +
+ *  log 'log' shapes, roles included) into another dictionary's schema, so
+ *  the shared Tags/Log surface works there (dz 2026-07-28: notes + log
+ *  for all dictionaries).  Idempotent; verbatim copies keep the field
+ *  names/binds the workflow code reads.  Returns what it added. */
+export function ensureWorkflowRelations(assertionTable: string): string[] {
+    if(assertionTable === 'dict') return [];
+    const dictSchema = JSON.parse(readConfigValue('dict', 'schema')
+        ?? panicString(`default dictionary has no schema config`));
+    const targetText = readConfigValue(assertionTable, 'schema')
+        ?? panicString(`dictionary '${assertionTable}' has no schema config`);
+    const target = JSON.parse(targetText);
+    const targetEntry = target.entry ?? panicString(`'${assertionTable}' schema has no entry`);
+    const added: string[] = [];
+    for(const name of ['tag', 'log']) {
+        const src = dictSchema.entry?.[name];
+        if(!src) continue;
+        const have = Object.values(targetEntry).some(v =>
+            typeof v === 'object' && v !== null && (v as any).$tag === src.$tag);
+        if(have) continue;
+        targetEntry[name] = structuredClone(src);
+        added.push(name);
+    }
+    if(added.length > 0)
+        writeConfigValue(assertionTable, 'schema',
+                         canonicalSchemaJsonText(assertionTable, target));
+    return added;
+}
+
+function panicString(msg: string): never { throw new Error(msg); }

@@ -213,4 +213,8 @@ fi
 # STRICT mode (the liminal default now that jsterp is unhooked) - undeclared
 # members 404, @route perms + POST-for-mutations enforced.  For debugging only,
 # override with `LIMINAL_ROUTE_POLICY=permissive ./wordwiki.sh`.
-deno run --check --allow-all "$WORDWIKI_SRC/wordwiki/wordwiki.ts" "$@"
+# Heap: the default 4GB cannot hold every dictionary's workspace at once
+# (rand alone is ~1M assertion rows; serving rand + clark + MMO pages
+# OOMed the server 2026-07-28).  8GB fits the public server's RAM (dz);
+# the structural workspace slimming is future work.
+deno run --check --v8-flags=--max-old-space-size=8192 --allow-all "$WORDWIKI_SRC/wordwiki/wordwiki.ts" "$@"

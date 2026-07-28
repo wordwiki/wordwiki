@@ -5,20 +5,20 @@
  */
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals } from "../liminal/testing/assert.ts";
-import * as model from "./model.ts";
+import * as model from "../wordwiki/model.ts";
 import { CLARK_SCHEMA_JSON } from "./clark-import.ts";
-import * as pt from "./page-transcribe.ts";
+import * as pt from "../wordwiki/page-transcribe.ts";
 
 test("clark schema JSON parses; headword + gloss + documentReference present", () => {
     const schema = model.Schema.parseSchemaFromCompactJson('clark', CLARK_SCHEMA_JSON);
     assertEquals(schema.tag, 'clk');
     const entry = schema.relationFields[0];
     const tags = entry.descendantAndSelfRelations.map(r => r.tag).toSorted();
-    assertEquals(tags, ['drv', 'ent', 'gls', 'nte', 'ref', 'spl', 'stx', 'xrf'].toSorted());
+    assertEquals(tags, ['drv', 'ent', 'gls', 'nte', 'ref', 'rtr', 'spl', 'xrf'].toSorted());
 });
 
 test("isHeaderLine: guide words, section letters and page numbers; not entries", () => {
-    for(const h of ['WEN', 'A', 'ABA', '-170-', '/ 40 /', '—85—'])
+    for(const h of ['WEN', 'A', 'ABA', '-170-', '/ 40 /', '—85—', 'I5 -', '2I'])
         assert(pt.isHeaderLine(h), `header: ${h}`);
     for(const e of ['wep, the pith.', 'Wesek,. Gibraltar, N. S.', 'ship.',
                     'weskijenooe, I am born.'])

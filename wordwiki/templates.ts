@@ -14,6 +14,11 @@ export interface PageContent {
     head?: any;
     body?: any;
     showTestClientLink?: boolean;
+    // The dictionary this page belongs to ('dict' when absent) - the
+    // ACTIVE-DICTIONARY control derives from the URL, single source of
+    // truth (dz 2026-07-28); this field only seeds the navbar's initial
+    // full-load render (the inline hook keeps it fresh across swaps).
+    dictionary?: string;
     // Opt out of the centred reading column (a wide tool like the page-image
     // editor needs the full viewport width).
     fullBleed?: boolean;
@@ -42,10 +47,11 @@ export interface Page {
     [pageMarker]: true;
     title: any;
     body: any;
+    dictionary?: string;
 }
 
-export function page(title: any, body: any): Page {
-    return {[pageMarker]: true, title, body};
+export function page(title: any, body: any, opts: {dictionary?: string} = {}): Page {
+    return {[pageMarker]: true, title, body, dictionary: opts.dictionary};
 }
 
 export function isPage(v: any): v is Page {
@@ -208,7 +214,7 @@ export function htmxPageTemplate(content: PageContent): any {
           content.head,
          ],
          ['body', {},
-          navBar(content.showTestClientLink),
+          navBar(content.showTestClientLink, content.dictionary),
           ['audio', {id:'audioPlayer', preload:'none'},
            ['source', {src:'', type:'audio/mpeg'}]],
           // The page body lives in #content, the swap target for hx-boosted
@@ -361,12 +367,93 @@ export function setDefaultShowTestClientLink(v: boolean): void {
     defaultShowTestClientLink = v;
 }
 
-export function navBar(showTestClientLink: boolean = defaultShowTestClientLink): any {
+// --- Active dictionary (dz 2026-07-28) --------------------------------------
+//
+// The ACTIVE DICTIONARY is derived from the URL, nowhere else (a session
+// copy would fight the URL): a page under /ww/wordwiki.dicts.<t>.* belongs
+// to t, everything else to the default ('dict', the MMO site).  The navbar
+// badge - a peer of the orthography switcher - names it, and its dropdown
+// is plain NAVIGATION to each dictionary's home (full page loads, so the
+// navbar re-renders).  Because the navbar persists across htmx-boosted
+// swaps, a tiny inline hook re-derives the badge + the dictionary-scoped
+// nav links from location.pathname after every swap - the URL stays the
+// single source of truth.
+
+function dictionaryChoices(): {table: string, label: string}[] {
+    const label = (t: string) =>
+        dictionaryConfig.readConfigValue(t, 'name')
+        ?? dictionaryConfig.readConfigValue(t, 'slug') ?? t;
+    return [{table: 'dict', label: 'MMO'},
+            ...dictionaryConfig.discoverDictionaries()
+                .filter(t => t !== 'dict')
+                .map(t => ({table: t, label: label(t)}))];
+}
+
+function dictionaryHomeUrl(table: string): string {
+    return table === 'dict' ? '/ww/' : `/ww/wordwiki.dicts.${table}.home()`;
+}
+
+function dictionaryBadgeSwitcher(active: string,
+                                 choices: {table: string, label: string}[]): any {
+    const current = choices.find(c => c.table === active) ?? choices[0];
+    return ['div', {class: 'dropdown d-inline-block me-2'},
+        ['a', {class: 'dropdown-toggle text-light text-decoration-none', href: '#',
+               role: 'button', 'data-bs-toggle': 'dropdown', 'aria-expanded': 'false',
+               title: 'Active dictionary — click to change'},
+         ['span', {class: 'badge text-bg-info', id: 'lm-dict-badge'}, current.label]],
+        ['ul', {class: 'dropdown-menu'},
+         ['li', {}, ['h6', {class: 'dropdown-header'}, 'Active dictionary']],
+         // Plain hrefs ON PURPOSE: a full page load re-renders the navbar
+         // in the target dictionary's context.
+         choices.map(c => ['li', {}, ['a',
+             {class: `dropdown-item${c.table === active ? ' active' : ''}`,
+              href: dictionaryHomeUrl(c.table)}, c.label]])]];
+}
+
+// The freshness hook: htmx swaps #content but the navbar persists, so on
+// every settle we re-read the URL and update the badge, the scoped link
+// targets, and which nav items show.  Idempotent across full loads.
+function dictionaryNavScript(choices: {table: string, label: string}[]): any {
+    const labels = Object.fromEntries(choices.map(c => [c.table, c.label]));
+    return ['script', {}, block`
+/**/  (function() {
+/**/    if(window.__lmDictNavHook) return;
+/**/    window.__lmDictNavHook = true;
+/**/    const labels = ${JSON.stringify(labels)};
+/**/    function sync() {
+/**/      const m = location.pathname.match(/wordwiki\\.dicts\\.([A-Za-z0-9_]+)\\./);
+/**/      const active = (m && labels[m[1]] !== undefined) ? m[1] : 'dict';
+/**/      const badge = document.getElementById('lm-dict-badge');
+/**/      if(badge) badge.textContent = labels[active] ?? active;
+/**/      for(const el of document.querySelectorAll('[data-dict-link]')) {
+/**/        const kind = el.getAttribute('data-dict-link');
+/**/        el.href = kind === 'browse'
+/**/            ? '/ww/wordwiki.dicts.' + active + '.home()'
+/**/            : '/ww/wordwiki.dicts.' + active + '.search(%22%22)';
+/**/      }
+/**/      for(const el of document.querySelectorAll('[data-dict-only]'))
+/**/        el.style.display =
+/**/            (el.getAttribute('data-dict-only') === 'default') === (active === 'dict')
+/**/            ? '' : 'none';
+/**/    }
+/**/    document.addEventListener('htmx:afterSettle', sync);
+/**/    sync();
+/**/  })();`];
+}
+
+export function navBar(showTestClientLink: boolean = defaultShowTestClientLink,
+                       activeDictionary: string = 'dict'): any {
     const oStatus = orthographyStatus();
+    const dictChoices = dictionaryChoices();
+    const isDefault = activeDictionary === 'dict';
     return ([
         ['nav', {class:'navbar navbar-expand-lg bg-body-tertiary bg-dark border-bottom border-body', 'data-bs-theme':'dark'},
          ['div', {class:'container-fluid'},
           ['a', {class:'navbar-brand me-2', href:'/ww/'}, siteConfig.editorName],
+          // The active-dictionary badge, then the working-lane badge - the
+          // two context switchers side by side beside the brand.
+          dictChoices.length > 1
+              ? dictionaryBadgeSwitcher(activeDictionary, dictChoices) : undefined,
           // The level-1 notice AND the switcher in one: the grey working-
           // lane badge beside the brand, click to change.
           oStatus ? orthographyBadgeSwitcher(oStatus) : undefined,
@@ -375,8 +462,21 @@ export function navBar(showTestClientLink: boolean = defaultShowTestClientLink):
           ['div', {class:'collapse navbar-collapse', id:'navbarSupportedContent'},
            ['ul', {class:'navbar-nav me-auto mb-2 mb-lg-0'},
 
-            ['li', {class:'nav-item'},
+            // Categories is the DEFAULT dictionary's tree; other
+            // dictionaries get Browse + Search over their own store.  All
+            // three render always; visibility follows the active
+            // dictionary (initial style here, the nav hook after swaps).
+            ['li', {class:'nav-item', 'data-dict-only':'default',
+                    style: isDefault ? '' : 'display:none'},
              ['a', {class:'nav-link', href:'/ww/wordwiki.editorReports.categoriesDirectory()'}, 'Categories']],
+            ['li', {class:'nav-item', 'data-dict-only':'other',
+                    style: isDefault ? 'display:none' : ''},
+             ['a', {class:'nav-link', 'data-dict-link':'browse',
+                    href:`/ww/wordwiki.dicts.${activeDictionary}.home()`}, 'Browse']],
+            ['li', {class:'nav-item', 'data-dict-only':'other',
+                    style: isDefault ? 'display:none' : ''},
+             ['a', {class:'nav-link', 'data-dict-link':'search',
+                    href:`/ww/wordwiki.dicts.${activeDictionary}.search("")`}, 'Search']],
 
             // --- Reference Books
             ['li', {class:'nav-item dropdown'},
@@ -390,24 +490,8 @@ export function navBar(showTestClientLink: boolean = defaultShowTestClientLink):
               ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.pages.pageEditor("RandFirstReadingBook")'}, 'RandFirstReadingBook']],
              ]],
 
-            // --- Dictionaries (data-driven - rand-references-design.md:
-            //     drop a table pair into the db and it lists here; the
-            //     DEFAULT dictionary is the site itself, so only the
-            //     others appear).
-            (() => {
-                const dicts = dictionaryConfig.discoverDictionaries()
-                    .filter(t => t !== 'dict');
-                if(dicts.length === 0) return undefined;
-                return ['li', {class:'nav-item dropdown'},
-                    ['a', {class:'nav-link dropdown-toggle', href:'#', role:'button',
-                           'data-bs-toggle':'dropdown', 'aria-expanded':'false'},
-                     'Dictionaries'],
-                    ['ul', {class:'dropdown-menu'},
-                     dicts.map(t => ['li', {}, ['a',
-                         {class:'dropdown-item', href:`/ww/wordwiki.dicts.${t}.home()`},
-                         dictionaryConfig.readConfigValue(t, 'name')
-                             ?? dictionaryConfig.readConfigValue(t, 'slug') ?? t]])]];
-            })(),
+            // (The old data-driven 'Dictionaries' dropdown is superseded by
+            // the active-dictionary badge switcher beside the brand.)
 
             // --- Reports
             ['li', {class:'nav-item dropdown'},
@@ -492,7 +576,8 @@ export function navBar(showTestClientLink: boolean = defaultShowTestClientLink):
           ]]],
         // The level-2 notice: the override banner rides with the navbar so
         // BOTH page templates carry it on every page.
-        orthographyOverrideBanner(oStatus)]);
+        orthographyOverrideBanner(oStatus),
+        dictChoices.length > 1 ? dictionaryNavScript(dictChoices) : undefined]);
 }
 
 export function pageTemplate(content: PageContent): any {

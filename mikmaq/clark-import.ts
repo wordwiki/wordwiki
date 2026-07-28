@@ -24,16 +24,145 @@ import * as posix from "https://deno.land/std@0.195.0/path/posix.ts";
 import { db } from "../liminal/db.ts";
 import { loadLlm, LlmUsage } from "../liminal/llm.ts";
 import { extractTextStage, ExtractConfig } from "../liminal/extract.ts";
-import { highestTimestamp, type Assertion, assertionPathToFields } from './assertion.ts';
-import * as dictionaryConfig from './dictionary-config.ts';
-import { contentKeyId } from './sfm-import.ts';
-import { selectScannedDocumentByFriendlyId, getOrCreateTaggingSheet } from './scanned-document.ts';
-import { copyRefBoxToNewGroup, copyRefBoxToExistingGroup } from './render-page-editor.ts';
-import { bandTranscribeStage, entryInterpretStage, bandCropImageSource, headwordOf,
-         assembleBook, llmRetry, TRANSCRIBE_MODEL } from './page-transcribe.ts';
+import { highestTimestamp, type Assertion, assertionPathToFields } from '../wordwiki/assertion.ts';
+import * as dictionaryConfig from '../wordwiki/dictionary-config.ts';
+import { contentKeyId } from '../wordwiki/sfm-import.ts';
+import { selectScannedDocumentByFriendlyId, getOrCreateTaggingSheet } from '../wordwiki/scanned-document.ts';
+import { copyRefBoxToNewGroup, copyRefBoxToExistingGroup } from '../wordwiki/render-page-editor.ts';
+import { bandCropImageSource, headwordOf, assembleBook, llmRetry,
+         BandInput } from '../wordwiki/page-transcribe.ts';
+import { block } from '../liminal/strings.ts';
+import type { ExtractStage } from '../liminal/extract.ts';
 
 export const CLARK_IMPORT_USERNAME = '~clark-import';
 export const CLARK_LANE = 'clark';
+
+export const PROMPT_VERSION_BAND_TRANSCRIBE = 1;
+export const PROMPT_VERSION_ENTRY_INTERPRET = 2;   // v2: headword = FIRST italic
+                                                   // form; inflection endings
+                                                   // separated (the 'ul' bug)
+export const TRANSCRIBE_MODEL = 'claude-opus-4-8';
+
+
+// Physical facts only: glyphs, diacritics, style.  Language tagging,
+// entry boundaries and meaning are layer 2 - and the model never sees
+// expected spellings (checker, not primer).  The per-band facts
+// (expected line count, position context) travel in `input` so they are
+// part of the cache key.
+const AMBIGUITY_RULES = block`
+/**/If you are genuinely unsure between readings, DO NOT silently pick one:
+/**/write the alternatives in square brackets separated by | (e.g. "wen[j|y]awe"
+/**/means the letter could be j or y).  Use ⁇ for a truly illegible character.
+/**/Use these sparingly - only where you are actually unsure.`;
+
+const CONFIDENCE_RULES = block`
+/**/Also return "confidence": an integer 0-100, your overall confidence that
+/**/your transcription is correct (100 = certain).  Be honest - this number
+/**/is used to decide which results need human review.`;
+
+export function bandTranscribeStage(model = TRANSCRIBE_MODEL): ExtractStage {
+    return {
+        name: 'band-transcribe',
+        model,
+        promptVersion: PROMPT_VERSION_BAND_TRANSCRIBE,
+        imageBox: 1600,
+        schema: {
+            type: 'object',
+            properties: {
+                lines: {type: 'array', items: {type: 'string'},
+                        description: 'one string per printed line, in order'},
+                confidence: {type: 'integer', description: 'overall confidence 0-100'},
+            },
+            required: ['lines', 'confidence'],
+        },
+        prompt: (input: unknown) => {
+            const b = input as BandInput;
+            return block`
+/**/You are transcribing a band of consecutive lines from one column of a
+/**/printed 1902 Mi'kmaq dictionary page (${b.book}, printed page ${b.printed},
+/**/${b.column} column).  The orthography is Rand-style, using diacritics such
+/**/as ā ē ī ō ū â ĕ ŏ ŭ and apostrophes.  The image shows ${b.expectedLines}
+/**/printed lines.
+/**/
+/**/Transcribe EXACTLY what is printed, letter for letter:
+/**/- return exactly one output line per printed line, in order
+/**/  (${b.expectedLines} lines);
+/**/- preserve every diacritic exactly as printed; do not normalize,
+/**/  modernize or correct spellings;
+/**/- wrap italic text in *...* (in this book headwords and Mi'kmaq words
+/**/  are typically italic, English roman - but record what the TYPE shows,
+/**/  not what you expect);
+/**/- keep punctuation, capitalization, parentheses and end-of-line
+/**/  hyphenation exactly as printed; never join or re-wrap lines;
+/**/- transcribe the physical text only: do not interpret, translate,
+/**/  complete or expand anything.
+/**/${AMBIGUITY_RULES}
+/**/${CONFIDENCE_RULES}`;
+        },
+    };
+}
+
+// Layer-2 TASTE stage for the survey: read one assembled entry as the
+// intelligent reader and pull out the structure the soft schema will
+// need.  Text-only (extractTextStage) - iterating this is nearly free.
+export function entryInterpretStage(model = TRANSCRIBE_MODEL): ExtractStage {
+    return {
+        name: 'clark-entry-interpret',
+        model,
+        promptVersion: PROMPT_VERSION_ENTRY_INTERPRET,
+        imageBox: 0,
+        schema: {
+            type: 'object',
+            properties: {
+                headword: {type: 'string',
+                           description: 'the FIRST italic Mi\'kmaq form the entry text starts ' +
+                               'with, markup removed; "" if the text is a fragment with no headword'},
+                alt_spellings: {type: 'array', items: {type: 'string'},
+                                description: 'FULL alternate spellings of the headword, e.g. ' +
+                                    'parenthesized variants - never short inflection endings'},
+                endings: {type: 'array', items: {type: 'string'},
+                          description: 'short inflection endings listed right after the headword ' +
+                              '(e.g. the "ul" of "*aloomook*, *ul*, dark-coloured" or the "k, l" ' +
+                              'of "*ābeā*, k, l, adj.") - verbatim, without the headword'},
+                glosses: {type: 'array', items: {type: 'string'},
+                          description: 'English senses of the headword itself'},
+                derivatives: {type: 'array', items: {type: 'object', properties: {
+                                  form: {type: 'string'}, gloss: {type: 'string'}},
+                              required: ['form', 'gloss']},
+                              description: 'embedded related Mi\'kmaq forms with their own glosses'},
+                cross_refs: {type: 'array', items: {type: 'string'},
+                             description: 'references to other words, entries or texts, verbatim'},
+                notes: {type: 'array', items: {type: 'string'},
+                        description: 'dialect / usage / place-name / editorial notes, verbatim'},
+                confidence: {type: 'integer'},
+            },
+            required: ['headword', 'glosses', 'confidence'],
+        },
+        prompt: (input: unknown) => {
+            const {entryText} = input as {entryText: string};
+            return block`
+/**/Below is a faithful transcription of ONE entry from Clark's 1902 Mi'kmaq
+/**/dictionary (italics are wrapped in *...*; [a|b] marks an uncertain
+/**/reading; line breaks are the printed line breaks - rejoin hyphenated
+/**/words).  The prose assumes an intelligent reader: glosses, embedded
+/**/derivative forms, cross-references ("cf. ...", "See ..."), dialect and
+/**/place-name notes may all be mixed together.  Extract the structure.
+/**/Quote Mi'kmaq forms EXACTLY as transcribed, diacritics intact.
+/**/
+/**/The headword is the FIRST italic form the text opens with - never one
+/**/of the short inflection endings the book often lists right after it
+/**/(in "*aloomook*, *ul*, dark-coloured", the headword is aloomook and ul
+/**/is an ending; report endings in the "endings" field).  Rejoin words
+/**/split by end-of-line hyphenation.  If the text is a stray fragment
+/**/with no headword, return "" for headword - never invent one.
+/**/
+/**/ENTRY:
+/**/${entryText}
+/**/${CONFIDENCE_RULES}`;
+        },
+    };
+}
+
 // Stage-B verdict (clark/diacritic-eval.md): Sonnet is the better AND
 // cheaper transcriber on this print, so its text is PRIMARY; Opus is the
 // second opinion in the dual-model gate (divergent lines flagged).
@@ -86,21 +215,25 @@ export const CLARK_SCHEMA_JSON: any = {
             note_id: {$type: 'primary_key', $bind: 'id'},
             note: {$type: 'string', $bind: 'attr1'},
         },
-        source_text: {
-            $type: 'relation', $tag: 'stx', $prompt: 'Source text',
-            $style: {$shape: 'compactInlineListRelation',
-                     $view: {order: 6, label: 'inline', audience: 'internal'}},
-            source_text_id: {$type: 'primary_key', $bind: 'id'},
-            text: {$type: 'string', $bind: 'attr1', $style: {$width: 60, $height: 5}},
-            printed_page: {$type: 'integer', $bind: 'attr2', $optional: true},
-        },
         document_reference: {
             $type: 'relation', $tag: 'ref', $role: 'documentReference',
             $style: {$shape: 'containerRelation',
-                     $view: {order: 7, label: 'heading', empty: 'elide'}},
+                     $view: {order: 6, label: 'heading', empty: 'elide'}},
             document_reference_id: {$type: 'primary_key', $bind: 'id'},
             bounding_group_id: {$type: 'integer', $bind: 'attr1',
                                 $style: {$shape: 'boundingGroup'}},
+            // The verbatim layer-1 transcription RIDES the reference (dz:
+            // the primary dict keeps the source text inside the document
+            // reference - a detached sibling was not a win), same 'rtr'
+            // tag convention as rand's.
+            transcription: {
+                $type: 'relation', $tag: 'rtr',
+                $style: {$shape: 'compactInlineListRelation',
+                         $view: {order: 1, label: 'inline', empty: 'elide'}},
+                transcription_id: {$type: 'primary_key', $bind: 'id'},
+                text: {$type: 'string', $bind: 'attr1', $style: {$width: 60, $height: 5}},
+                printed_page: {$type: 'integer', $bind: 'attr2', $optional: true},
+            },
         },
     },
 };
@@ -117,11 +250,18 @@ function ensureClarkOrthography(): void {
     }, 'orthography_id');
 }
 
+// Human WORKFLOW rows (tags 'tdo' + log 'log') are exempt from the
+// mirror discipline: they survive re-imports (content-keyed entry ids
+// keep them attached to unchanged entries; rows on entries whose content
+// changed orphan VISIBLY, never mis-attach - the sfm-import principle).
+const WORKFLOW_TYS = `('tdo', 'log')`;
+
 function foreignAssertionCount(table: string): number {
     try {
         return db().first<{n: number}>(
-            `SELECT COUNT(*) AS n FROM ${table} WHERE change_by_username IS NULL ` +
-            `OR change_by_username <> :u`, {u: CLARK_IMPORT_USERNAME})?.n ?? 0;
+            `SELECT COUNT(*) AS n FROM ${table} WHERE (change_by_username IS NULL ` +
+            `OR change_by_username <> :u) AND ty NOT IN ${WORKFLOW_TYS}`,
+            {u: CLARK_IMPORT_USERNAME})?.n ?? 0;
     } catch(_e) { return 0; }
 }
 
@@ -195,13 +335,15 @@ export async function importClark(opts: ClarkImportOpts): Promise<ClarkImportRes
         if(foreign > 0)
             throw new Error(`clark has ${foreign} foreign assertion(s) - re-import would ` +
                             `destroy them; refusing`);
-        db().execute(`DELETE FROM clark`, {});
+        db().execute(`DELETE FROM clark WHERE ty NOT IN ${WORKFLOW_TYS}`, {});
         dictionaryConfig.writeConfigValue('clark', 'schema',
             dictionaryConfig.canonicalSchemaJsonText('clark', schemaJson));
     } else {
         dictionaryConfig.createDictionary('clark', schemaJson, {slug: 'clark'});
     }
     dictionaryConfig.writeConfigValue('clark', 'import_mirror', 'true');
+    dictionaryConfig.writeConfigValue('clark', 'name', 'Clark (1902)');
+    dictionaryConfig.ensureWorkflowRelations('clark');
     const generation =
         Number(dictionaryConfig.readConfigValue('clark', 'import_generation') ?? '0') + 1;
     dictionaryConfig.writeConfigValue('clark', 'import_generation', String(generation));
@@ -236,8 +378,11 @@ export async function importClark(opts: ClarkImportOpts): Promise<ClarkImportRes
     const strip = (s: string) => s.replace(/\[([^|\]]*)\|[^\]]*\]/g, '$1')
         .replace(/[*⁇]/g, '').trim();
 
+    let skippedEmpty = 0;
     for(const [idx, e] of assembled.entries.entries()) {
         const interp = interps[idx];
+        // A whitespace-only assembly artifact is not an entry.
+        if(e.text.replace(/[^\p{L}\p{N}]/gu, '') === '') { skippedEmpty++; continue; }
         const occ = occOf.get(e.text) ?? 0;
         occOf.set(e.text, occ + 1);
         const entryId = claimId(contentKeyId(['clark-ent', e.text, occ]));
@@ -256,26 +401,35 @@ export async function importClark(opts: ClarkImportOpts): Promise<ClarkImportRes
             order_key: orderkey.new_range_start_string,
             change_by_username: CLARK_IMPORT_USERNAME,
         } as Assertion);
-        const emit = (tag: string, attrs: Record<string, unknown>): void => {
+        const emitAt = (parentPath: [string, number][], tag: string,
+                        attrs: Record<string, unknown>): number => {
             const id = claimId(contentKeyId(['clark-fld', entryId, ordinal++]));
             rows.push({
-                ...assertionPathToFields([...entryPath, [tag, id]]),
+                ...assertionPathToFields([...parentPath, [tag, id]]),
                 assertion_id: id, id, ty: tag,
                 valid_from: t, valid_to: timestamp.END_OF_TIME,
                 order_key: keyFor(tag),
                 change_by_username: CLARK_IMPORT_USERNAME,
                 ...attrs,
             } as Assertion);
+            return id;
         };
+        const emit = (tag: string, attrs: Record<string, unknown>): number =>
+            emitAt(entryPath, tag, attrs);
 
         // Headword + alternates in the clark lane (mechanical fallback
-        // when interpretation failed - the entry must still browse).
-        const headword = strip(interp?.headword ?? headwordOf(e.lines[0]?.text ?? ''));
+        // when interpretation failed or refused - the entry must still
+        // browse).  Inflection endings land as a note, never as spl.
+        let headword = strip(interp?.headword ?? '');
+        if(headword === '' || /unknown/i.test(headword))
+            headword = strip(headwordOf(e.lines[0]?.text ?? ''));
         if(headword !== '')
             emit('spl', {attr1: headword, variant: CLARK_LANE});
         for(const alt of interp?.alt_spellings ?? [])
             if(strip(alt) !== '' && strip(alt) !== headword)
                 emit('spl', {attr1: strip(alt), variant: CLARK_LANE});
+        const endings = (interp?.endings ?? []).map(strip).filter((s: string) => s !== '');
+        if(endings.length > 0) { emit('nte', {attr1: `endings: ${endings.join(', ')}`}); r.notes++; }
         for(const g of interp?.glosses ?? [])
             if(String(g).trim() !== '') { emit('gls', {attr1: String(g).trim()}); r.glosses++; }
         for(const d of interp?.derivatives ?? [])
@@ -288,16 +442,23 @@ export async function importClark(opts: ClarkImportOpts): Promise<ClarkImportRes
         for(const n of interp?.notes ?? [])
             if(String(n).trim() !== '') { emit('nte', {attr1: String(n).trim()}); r.notes++; }
         if(interp !== undefined && Number(interp.confidence ?? 100) < 70) r.lowConfidence++;
-        emit('stx', {attr1: e.text, attr2: e.printed});
-
         // The documentReference: a bounding group of the entry's own
-        // textract line boxes, on OUR tagging sheet.
+        // textract line boxes on OUR tagging sheet, with the verbatim
+        // layer-1 transcription riding it (the primary dict's shape).
         const boxes = e.lines.map(l => l.box_id);
         if(boxes.length > 0) {
             const {bounding_group_id} = copyRefBoxToNewGroup(boxes[0], layerId, 'green');
             for(const b of boxes.slice(1))
                 copyRefBoxToExistingGroup(bounding_group_id, b);
-            emit('ref', {attr1: bounding_group_id});
+            const refId = emit('ref', {attr1: bounding_group_id});
+            emitAt([...entryPath, ['ref', refId]], 'rtr',
+                   {attr1: e.text, attr2: e.printed});
+        } else {
+            // No boxes (should not happen) - the transcription must still
+            // land; a ref row with no group carries it.
+            const refId = emit('ref', {attr1: null});
+            emitAt([...entryPath, ['ref', refId]], 'rtr',
+                   {attr1: e.text, attr2: e.printed});
         }
     }
     r.idCollisions = idCollisions;
@@ -321,7 +482,8 @@ export async function importClark(opts: ClarkImportOpts): Promise<ClarkImportRes
         `- headers skipped: ${r.headersSkipped}; column/page joins: ${r.columnJoins}`,
         `- dual-model divergent lines: ${r.divergentLines} (flagged in-band on their entries); ` +
         `primary dropped ${r.droppedPrimary} (textract fallback)`,
-        `- interpret failures: ${r.interpretFailures}; low-confidence (<70): ${r.lowConfidence}`,
+        `- interpret failures: ${r.interpretFailures}; low-confidence (<70): ${r.lowConfidence}; ` +
+        `empty fragments skipped: ${skippedEmpty}`,
         `- id collisions (re-salted): ${r.idCollisions}`,
         ``,
         `## Usage (actual API spend this run; cache hits free)`,

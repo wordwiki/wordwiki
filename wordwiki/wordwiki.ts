@@ -618,11 +618,34 @@ export class WordWiki extends LiminalApp {
      *  lexeme editor (dz: one way to add a note / tag everywhere - no
      *  learning two flows).  The floating log dock + the Tags section + the
      *  Log section; the editor suppresses the generic tag/log rows
-     *  (hideRelationTags) so these are the single representation. */
-    renderLexemeWorkflow(entry_id: number): any {
-        return [this.renderLexemeLogDock(entry_id),
-                this.renderLexemeTagsSection(entry_id),
-                this.renderLexemeLogSection(entry_id)];
+     *  (hideRelationTags) so these are the single representation.
+     *  GENERALIZED BY ROLE (dz 2026-07-28): every dictionary whose schema
+     *  declares the workflowTag/log relations gets the same surface - the
+     *  `dict` parameter rides every fragment URL and verb, and the ops
+     *  resolve against that dictionary's store. */
+    renderLexemeWorkflow(entry_id: number, dict: string = 'dict'): any {
+        // No workflow relations in the schema -> no workflow surface (the
+        // ensure-workflow-relations step adds them per dictionary).
+        const schema = this.storeFor(dict).dictSchema;
+        const entryRel = schema.relationFields[0];
+        if(!entryRel.descendantAndSelfRelations.some(r => r.tag === 'tdo' || r.tag === 'log'))
+            return [];
+        return [this.renderLexemeLogDock(entry_id, dict),
+                this.renderLexemeTagsSection(entry_id, dict),
+                this.renderLexemeLogSection(entry_id, dict)];
+    }
+
+    /** The ops + store + route bases for a workflow verb/fragment in the
+     *  given dictionary.  The default dictionary keeps its historical URLs;
+     *  the others go through their own lexeme editor's route base. */
+    private workflowFor(dict: string) {
+        const store = this.storeFor(dict);
+        const ops = dict === 'dict' ? this.lexemeOps
+            : editorAppFor(this, store).lexemeOps;
+        const dialogR = dict === 'dict' ? '/ww/wordwiki.lexeme'
+            : `/ww/wordwiki.dicts.${dict}.lexeme`;
+        const d = JSON.stringify(dict);   // the trailing arg every URL carries
+        return {store, ops, dialogR, d};
     }
 
     /** The TAGS section (reloadable fragment `-lexeme-tags-<id>-`): every
@@ -631,14 +654,15 @@ export class WordWiki extends LiminalApp {
      *  quick-pick tags + "More\u2026".  `done` is real current-state data (dz):
      *  a done todo stays here, struck, until removed. */
     @route(authenticated)
-    renderLexemeTagsSection(entry_id: number): any {
+    renderLexemeTagsSection(entry_id: number, dict: string = 'dict'): any {
+        const {store, dialogR, d} = this.workflowFor(dict);
         const mayEdit = templates.mayEditLexemes();
         const todoSlugs = tag.todoTagSlugs(this.tags);
         const tagNames = new Map(this.tags.allByOrder.all({}).map(t => [t.slug, t.name]));
         const tagName = (slug: string) => tagNames.get(slug) ?? entry.todos[slug] ?? slug;
-        const tags = this.entriesById.get(entry_id)?.tag ?? [];
+        const tags = ((store.entriesById.get(entry_id) as any)?.tag ?? []) as entry.Tag[];
 
-        const R = '/ww/wordwiki.lexeme';
+        const R = dialogR;
         // The SECTION key: adding/removing a tag (line count changes) refreshes
         // the whole section; editing/doning ONE tag refreshes just its line
         // (its own -lexeme-tag-<fact>- fragment - dz).
@@ -657,7 +681,7 @@ export class WordWiki extends LiminalApp {
                 // Self-contained tags add immediately (one tap).
                 : {label: q.name,
                    mode: {kind: 'immediate' as const,
-                          expr: `wordwiki.addTag(${entry_id}, ${JSON.stringify(q.slug)})`,
+                          expr: `wordwiki.addTag(${entry_id}, ${JSON.stringify(q.slug)}, ${d})`,
                           deps: addTargets}});
             items.push('divider');
             items.push({label: 'More\u2026',
@@ -667,7 +691,7 @@ export class WordWiki extends LiminalApp {
         })() : undefined;
 
         return ['div', {...reloadableProps([`-lexeme-tags-${entry_id}-`],
-                                           `/ww/wordwiki.renderLexemeTagsSection(${entry_id})`),
+                                           `/ww/wordwiki.renderLexemeTagsSection(${entry_id}, ${d})`),
                         id: 'wwTagsSection'},
             (tags.length > 0 || menu)
                 ? ['div', {class: 'container ww-tags-pane mt-4 pt-3 border-top'},
@@ -678,7 +702,7 @@ export class WordWiki extends LiminalApp {
                        ? ['p', {class: 'text-muted small mb-0 mt-1'}, 'No tags yet.']
                        : ['ul', {class: 'ww-tag-list mt-1 mb-0'},
                           tags.map(t => this.renderTagLineMarkup(entry_id, t,
-                                                                 {mayEdit, todoSlugs, tagName}))]]
+                                                                 {mayEdit, todoSlugs, tagName, dict}))]]
                 : undefined];
     }
 
@@ -687,21 +711,25 @@ export class WordWiki extends LiminalApp {
      *  section (dz).  A removed tag renders NOTHING - the fragment swaps
      *  itself out (delete-as-empty-render). */
     @route(authenticated)
-    renderLexemeTagLine(entry_id: number, fact_id: number): any {
-        const t = (this.entriesById.get(entry_id)?.tag ?? []).find(x => x.tag_id === fact_id);
+    renderLexemeTagLine(entry_id: number, fact_id: number, dict: string = 'dict'): any {
+        const {store} = this.workflowFor(dict);
+        const t = (((store.entriesById.get(entry_id) as any)?.tag ?? []) as entry.Tag[])
+            .find(x => x.tag_id === fact_id);
         if(!t) return '';
         const todoSlugs = tag.todoTagSlugs(this.tags);
         const tagNames = new Map(this.tags.allByOrder.all({}).map(r => [r.slug, r.name]));
         const tagName = (slug: string) => tagNames.get(slug) ?? entry.todos[slug] ?? slug;
         return this.renderTagLineMarkup(entry_id, t,
-            {mayEdit: templates.mayEditLexemes(), todoSlugs, tagName});
+            {mayEdit: templates.mayEditLexemes(), todoSlugs, tagName, dict});
     }
 
     private renderTagLineMarkup(entry_id: number, t: entry.Tag,
                                 ctx: {mayEdit: boolean, todoSlugs: Set<string>,
-                                      tagName: (slug: string) => string}): any {
-        const {mayEdit, todoSlugs, tagName} = ctx;
-        const R = '/ww/wordwiki.lexeme';
+                                      tagName: (slug: string) => string,
+                                      dict: string}): any {
+        const {mayEdit, todoSlugs, tagName, dict} = ctx;
+        const {dialogR, d} = this.workflowFor(dict);
+        const R = dialogR;
         const isTodo = todoSlugs.has(t.tag);
         const done = !!t.done;
         // Per-line reload targets - an edit/done/remove touches only THIS line.
@@ -736,16 +764,16 @@ export class WordWiki extends LiminalApp {
             isTodo
                 ? ['button', {type: 'button', class: 'btn btn-sm btn-link p-0 ms-1 ww-tag-done',
                               title: done ? 'Mark not done' : 'Mark done',
-                              onclick: `txd(${deps})\`wordwiki.setTagDone(${entry_id}, ${t.tag_id}, ${done ? 'false' : 'true'})\``},
+                              onclick: `txd(${deps})\`wordwiki.setTagDone(${entry_id}, ${t.tag_id}, ${done ? 'false' : 'true'}, ${d})\``},
                    done ? '\u21ba' : '\u2713']
                 : undefined,
             // Removal is a tombstone - confirm it (dz).
             ['button', {type: 'button', class: 'btn btn-sm btn-link p-0 ms-1 text-danger ww-tag-remove',
                         title: 'Remove',
-                        onclick: `lmConfirm('Remove this tag?').then(ok => { if(ok) txd(${deps})\`wordwiki.removeTag(${entry_id}, ${t.tag_id})\`; })`}, '\u00d7'],
+                        onclick: `lmConfirm('Remove this tag?').then(ok => { if(ok) txd(${deps})\`wordwiki.removeTag(${entry_id}, ${t.tag_id}, ${d})\`; })`}, '\u00d7'],
         ] : undefined;
         const props = reloadableProps([`-lexeme-tag-${t.tag_id}-`],
-                                      `/ww/wordwiki.renderLexemeTagLine(${entry_id}, ${t.tag_id})`);
+                                      `/ww/wordwiki.renderLexemeTagLine(${entry_id}, ${t.tag_id}, ${d})`);
         props.class = 'ww-tag' + (done ? ' ww-tag-is-done' : '') + ' ' + props.class;
         return ['li', props, label, acts, valueBlock];
     }
@@ -754,7 +782,8 @@ export class WordWiki extends LiminalApp {
      *  session-log posts, top-posted, with feed-style bylines.  Titled
      *  "Log" (its own title now that Tags has its own - dz). */
     @route(authenticated)
-    renderLexemeLogSection(entry_id: number): any {
+    renderLexemeLogSection(entry_id: number, dict: string = 'dict'): any {
+        const {store, d} = this.workflowFor(dict);
         // The byline comes from each fact's FIRST version (the post; later
         // touch-ups don't re-date it); the text from the current one.
         const versions = db().all<{id: number, attr1: string, order_key: string,
@@ -762,7 +791,7 @@ export class WordWiki extends LiminalApp {
                                    change_by_username: string|null}, {entry_id: number}>(
             block`
 /**/     SELECT id, attr1, order_key, valid_from, valid_to, change_by_username
-/**/       FROM ${this.assertionTable}
+/**/       FROM ${store.assertionTable}
 /**/       WHERE ty = :ty AND id1 = :entry_id
 /**/       ORDER BY id, valid_from`, {ty: entry.LogTag, entry_id} as any);
         const byId = new Map<number, {first: typeof versions[0], current?: typeof versions[0]}>();
@@ -779,7 +808,7 @@ export class WordWiki extends LiminalApp {
             .toSorted((a, b) => (a.current!.order_key < b.current!.order_key ? -1 : 1));
 
         return ['div', {...reloadableProps([`-lexeme-log-${entry_id}-`],
-                                           `/ww/wordwiki.renderLexemeLogSection(${entry_id})`),
+                                           `/ww/wordwiki.renderLexemeLogSection(${entry_id}, ${d})`),
                         id: 'wwLogSection'},
             rows.length > 0
                 ? ['div', {class: 'container ww-log-pane mt-4 pt-3 border-top'},
@@ -816,8 +845,9 @@ export class WordWiki extends LiminalApp {
      *  "Post as todo" is the ACTIONABLE peer (dz: tag errors as they are
      *  noticed): same capture, structured landing - a generic unassigned
      *  todo with the text as details, queued in the todo report. */
-    renderLexemeLogDock(entry_id: number): any {
+    renderLexemeLogDock(entry_id: number, dict: string = 'dict'): any {
         if(!templates.mayEditLexemes()) return undefined;
+        const {d} = this.workflowFor(dict);
         return [['button', {type: 'button', id: 'wwLogFab', class: 'ww-log-fab',
                             onclick: 'wwLogToggle()',
                             title: 'Log a note on this word'},
@@ -836,7 +866,7 @@ export class WordWiki extends LiminalApp {
                   ['button', {type: 'button', class: 'btn btn-sm btn-link ms-auto',
                               onclick: 'wwLogToggle()'}, 'Close']]],
                 ['script', {}, block`
-/**/            const wwLogDraftKey = 'ww-log-draft-${entry_id}';
+/**/            const wwLogDraftKey = 'ww-log-draft-${dict}-${entry_id}';
 /**/            function wwLogToggle() {
 /**/                const drawer = document.getElementById('wwLogDrawer');
 /**/                const open = drawer.style.display === 'none';
@@ -859,7 +889,7 @@ export class WordWiki extends LiminalApp {
 /**/                const text = document.getElementById('wwLogText');
 /**/                const value = text.value.trim();
 /**/                if(value === '') return;
-/**/                await tx\`wordwiki.postLexemeLog(\${${entry_id}}, \${value}, \${kind})\`;
+/**/                await tx\`wordwiki.postLexemeLog(\${${entry_id}}, \${value}, \${kind}, ${d})\`;
 /**/                text.value = '';
 /**/                try { sessionStorage.removeItem(wwLogDraftKey); } catch {}
 /**/                wwLogSync();
@@ -890,10 +920,12 @@ export class WordWiki extends LiminalApp {
      *  relation fragments (targets that match nothing on a page are
      *  simply inert). */
     @routeMutation(authenticated)
-    postLexemeLog(entry_id: number, text: string, kind: string = 'log'): any {
+    postLexemeLog(entry_id: number, text: string, kind: string = 'log',
+                  dict: string = 'dict'): any {
         if(!Number.isSafeInteger(entry_id)) throw new Error('bad entry_id');
-        if(kind === 'todo') this.lexemeOps.postTag(entry_id, String(text ?? ''));
-        else this.lexemeOps.postLog(entry_id, String(text ?? ''));
+        const {ops} = this.workflowFor(dict);
+        if(kind === 'todo') ops.postTag(entry_id, String(text ?? ''));
+        else ops.postLog(entry_id, String(text ?? ''));
         return {action: 'reload', targets: this.workflowTargets(entry_id,
             kind === 'todo' ? 'tags' : 'log')};
     }
@@ -907,9 +939,9 @@ export class WordWiki extends LiminalApp {
 
     /** Add a quick-pick tag (the word Tags ☰). */
     @routeMutation(authenticated)
-    addTag(entry_id: number, slug: string): any {
+    addTag(entry_id: number, slug: string, dict: string = 'dict'): any {
         if(!Number.isSafeInteger(entry_id)) throw new Error('bad entry_id');
-        this.lexemeOps.addTag(entry_id, String(slug));
+        this.workflowFor(dict).ops.addTag(entry_id, String(slug));
         return {action: 'reload', targets: this.workflowTargets(entry_id, 'tags')};
     }
 
@@ -921,20 +953,21 @@ export class WordWiki extends LiminalApp {
 
     /** Toggle a tag's done state (the ✓ on a todo tag line) - just its line. */
     @routeMutation(authenticated)
-    setTagDone(entry_id: number, fact_id: number, done: boolean): any {
+    setTagDone(entry_id: number, fact_id: number, done: boolean,
+               dict: string = 'dict'): any {
         if(!Number.isSafeInteger(entry_id) || !Number.isSafeInteger(fact_id))
             throw new Error('bad id');
-        this.lexemeOps.setTagDone(entry_id, fact_id, !!done);
+        this.workflowFor(dict).ops.setTagDone(entry_id, fact_id, !!done);
         return {action: 'reload', targets: this.tagLineTargets(entry_id, fact_id)};
     }
 
     /** Remove a tag (the × - a tombstone, distinct from done): the line's
      *  fragment re-renders to nothing and swaps itself out. */
     @routeMutation(authenticated)
-    removeTag(entry_id: number, fact_id: number): any {
+    removeTag(entry_id: number, fact_id: number, dict: string = 'dict'): any {
         if(!Number.isSafeInteger(entry_id) || !Number.isSafeInteger(fact_id))
             throw new Error('bad id');
-        this.lexemeOps.removeTag(entry_id, fact_id);
+        this.workflowFor(dict).ops.removeTag(entry_id, fact_id);
         return {action: 'reload', targets: this.tagLineTargets(entry_id, fact_id)};
     }
 
@@ -1440,6 +1473,7 @@ export class WordWiki extends LiminalApp {
             return isHtmxRequest
                 ? [['title', {}, result.title], result.body]
                 : templates.htmxPageTemplate({title: result.title, body: result.body,
+                                              dictionary: result.dictionary,
                                               showTestClientLink: this.isTestDb,
                                               liveConfig: this.liveClientConfig()});
         return result;
