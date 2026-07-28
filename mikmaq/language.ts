@@ -39,6 +39,9 @@ export const MIKMAQ_NORMALIZERS: Record<string, OrthoNormalizer> = {
     'rand':      {strip: MARKS, foldDiacritics: true},
     'mm-mp':     {strip: MARKS, foldDiacritics: true},
     'mm-pm':     {strip: MARKS, foldDiacritics: true},
+    // Clark 1902 = Rand's system lighter, but 'tc' where Rand prints
+    // 'ch' (Wenootc/Wenooch) - mapped so the skeletons collide.
+    'clark':     {replace: {'tc': 'ch'}, strip: MARKS, foldDiacritics: true},
 };
 
 /** The Mi'gmaq similarity morphology (language rules v2 - the version

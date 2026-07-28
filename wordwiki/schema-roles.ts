@@ -111,6 +111,30 @@ export function headwordsAllLanes(schema: model.Schema, entryJson: any):
         .filter(t => (t.text ?? '') !== '');
 }
 
+/** Texts carried in a SOURCE orthography - any relation whose variant
+ *  field is flagged $sourceOrthography (rand's example_text): the
+ *  entry's source-lane spellings.  These are SPELLINGS of the entry in
+ *  the source book's own orthography, so cross-dictionary blocking must
+ *  see them (the Clark join found rand entries invisible without them -
+ *  rand's headword role holds only the watson lanes). */
+export function sourceOrthographyTexts(schema: model.Schema, entryJson: any):
+        Array<{text: string, variant: string}> {
+    const out: Array<{text: string, variant: string}> = [];
+    const entry = schema.relationFields[0];
+    if(!entry) return out;
+    for(const rel of entry.descendantAndSelfRelations) {
+        const vf = rel.scalarFields.find(f => f instanceof model.VariantField) as
+            model.VariantField|undefined;
+        if(!vf?.variantFlags.sourceOrthography) continue;
+        for(const t of collectTuples(entryJson, rel)) {
+            const text = tupleText(rel, t), variant = t[vf.name];
+            if((text ?? '') !== '' && (variant ?? '') !== '')
+                out.push({text, variant});
+        }
+    }
+    return out;
+}
+
 /** The FIRST headword tuple in ANY lane, keys normalized to {text, variant}
  *  - the cross-orthography fallback when the selected lane is empty (dz:
  *  wrong-orthography text beats a blank headword). */

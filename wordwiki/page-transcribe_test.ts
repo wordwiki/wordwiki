@@ -7,14 +7,23 @@ import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals } from "../liminal/testing/assert.ts";
 import * as pt from "./page-transcribe.ts";
 
+let nextBox = 1;
 const line = (x: number, y: number, text = '', w = 900, h = 60): pt.PageLine =>
-    ({x, y, w, h, text});
+    ({box_id: nextBox++, x, y, w, h, text});
 
-test("splitColumns: by line center; wide header lands by its center", () => {
+test("splitColumns: gutter by largest x-gap; short indented right-col line stays right", () => {
     const a = line(170, 300), b = line(1300, 300), header = line(1100, 100, '', 300);
     const {left, right} = pt.splitColumns([header, a, b], 2474);
     assertEquals(left, [a]);
-    assertEquals(right, [header, b]);   // header center 1250 >= 1237
+    assertEquals(right, [header, b]);
+    // The 'abode' case: right column starts LEFT of page-mid (1058), and a
+    // short continuation at its indent (x=1132, center < mid) must stay
+    // in the right column.
+    const l1 = line(95, 100), l2 = line(160, 174), l3 = line(97, 248);
+    const r1 = line(1058, 100), abode = line(1132, 174, 'abode', 180), r3 = line(1060, 248);
+    const cols = pt.splitColumns([l1, l2, l3, r1, abode, r3], 2474);
+    assertEquals(cols.left, [l1, l2, l3]);
+    assertEquals(cols.right, [r1, abode, r3]);
 });
 
 test("bandColumn: chunks of maxLines; crop rect covers the chunk + margin", () => {

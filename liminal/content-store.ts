@@ -241,11 +241,16 @@ export async function getDerived(contentStorePath: string,
 
         // --- Install the output.  If a concurrent generation already produced
         //     it (content-addressed, so byte-identical), discard our temp
-        //     rather than racing on the move.
+        //     rather than racing on the move.  NOTE: must be Deno.rename,
+        //     NOT std fs.move({overwrite}) - std move is REMOVE-then-rename,
+        //     and in that window a concurrent reader who was just handed the
+        //     content id sees the file vanish (bitten by the dual-model
+        //     transcription both deriving the same contained band crop).
+        //     rename() overwrites atomically on POSIX.
         if(await fs.exists(outputContentPath)) {
             await Deno.remove(tmpTargetName, { recursive: true }).catch(() => {});
         } else {
-            await fs.move(tmpTargetName, outputContentPath, { overwrite: true });
+            await Deno.rename(tmpTargetName, outputContentPath);
         }
     }
     

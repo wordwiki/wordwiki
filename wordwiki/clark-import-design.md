@@ -154,10 +154,29 @@ as human gold.  Outcome: Sonnet slightly BETTER than Opus on this book
 the DUAL-MODEL gate (agreement auto-accepts, divergences = the review
 queue, ~$80 full book); known-fuzzy class: worn accent shapes over o.
 
-Stage C - dev band: widen to 20-30 pages as the redo-freely set; build
-entry assembly + interpretation properly; land into a `clark` table;
-measure join rates at scale; review UI = the existing page/reference
-views.
+Stage C - dev band: BUILT 2026-07-28 (clark-import.ts + assembly in
+page-transcribe.ts; CLI `clark-import --pages=1-25`).  Dual-model layer 1
+(Sonnet primary per stage B, Opus gate; divergent lines flagged),
+mechanical entry assembly (gutter-detected column split - center-x
+misfiles short indented lines; hanging-indent starts; cross-column/page
+stitching), Sonnet interpretation, landing as an import-mirror `clark`
+table (sfm-style wipe+rebuild, content-keyed ids, '~clark-import' stamp)
+with per-entry bounding groups on the Tagging:clark sheet.  881 entries
+/ 5,163 assertions from printed 1-25 (generation 3).  Two bugs found and
+fixed by the dev band: the center-x column split misfiled short indented
+lines into the wrong column's entry ('abode'; now gutter-detected), and
+liminal's getDerived used std fs.move (remove-then-rename - a concurrent
+reader sees the file vanish; now atomic Deno.rename - hit by the
+dual-model runs deriving the same contained crop).
+JOIN: rand entries were invisible to Clark until entryKeys also indexed
+SOURCE-ORTHOGRAPHY texts (schemaRoles.sourceOrthographyTexts - rand's
+headword role holds only watson lanes; rand index 740k keys).  Measured:
+clark->rand same-word 371 pairs (referral band 466); 20.3% of clark
+entries collide exact-skeleton with rand; 5.9% reach MMO through the
+landed rand->mcp hub already.  clark->dict direct stays small by design
+- MMO reach is the hub composition.  Known dev-band items: entry-start
+over-detection (junk fragment entries), interpretation confidence <70 on
+~11%.
 
 Stage D - freeze + full run: layer-1 prompt frozen, run printed 1-172,
 interpret, land, join.  Grammar + place-name sections are OUT OF SCOPE

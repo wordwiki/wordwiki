@@ -46,7 +46,7 @@ function usdPerMtok(model: string): {inTok: number, outTok: number} {
 // --- Page geometry (textract lines already in the db) -----------------------------
 // ---------------------------------------------------------------------------------
 
-export interface PageLine { x: number; y: number; w: number; h: number; text: string; }
+export interface PageLine { box_id: number; x: number; y: number; w: number; h: number; text: string; }
 export interface PageGeom {
     page_id: number; printed: number; image_ref: string;
     width: number; height: number; lines: PageLine[];
@@ -62,7 +62,7 @@ export function pageGeometry(book: string, printed: number): PageGeom {
         {book, printed});
     if(!page) throw new Error(`no ${book} page with printed page number ${printed}`);
     const lines = db().all<PageLine, {page_id: number}>(block`
-/**/    SELECT b.x, b.y, b.w, b.h, b.text
+/**/    SELECT b.bounding_box_id AS box_id, b.x, b.y, b.w, b.h, b.text
 /**/       FROM bounding_box b
 /**/       JOIN layer l ON l.layer_id = b.layer_id
 /**/       WHERE b.page_id = :page_id AND l.layer_name = 'Text' AND b.text IS NOT NULL
@@ -75,13 +75,26 @@ export function pageGeometry(book: string, printed: number): PageGeom {
 // --- Mechanical segmentation: columns, bands, entry starts ------------------------
 // ---------------------------------------------------------------------------------
 
-/** Two-column split by line center (headers land wherever their center
- *  falls - they are visible as such in the report, not special-cased). */
+/** Two-column split at the GUTTER: the largest gap in the line-START
+ *  distribution within the central band.  (A center-x rule misfiles
+ *  SHORT indented right-column lines - the right column starts left of
+ *  page-mid, so a short continuation's center lands under page-mid and
+ *  the line joins the wrong column's entry; found via Clark p1 'abode'.)
+ *  Falls back to page-mid when no clear gutter exists. */
 export function splitColumns(lines: PageLine[], pageWidth: number):
         {left: PageLine[], right: PageLine[]} {
-    const left = lines.filter(l => l.x + l.w / 2 < pageWidth / 2);
-    const right = lines.filter(l => l.x + l.w / 2 >= pageWidth / 2);
-    return {left, right};
+    const xs = [...new Set(lines.map(l => l.x))].toSorted((a, b) => a - b);
+    let boundary = pageWidth / 2, best = 0;
+    for(let i = 1; i < xs.length; i++) {
+        const gap = xs[i] - xs[i - 1];
+        if(gap > best && xs[i] > pageWidth * 0.25 && xs[i - 1] < pageWidth * 0.75) {
+            best = gap;
+            boundary = (xs[i] + xs[i - 1]) / 2;
+        }
+    }
+    if(best < pageWidth * 0.08) boundary = pageWidth / 2;
+    return {left: lines.filter(l => l.x < boundary),
+            right: lines.filter(l => l.x >= boundary)};
 }
 
 export interface Band { lines: PageLine[]; x: number; y: number; w: number; h: number; }
@@ -237,7 +250,7 @@ async function bandCropCmd(targetResultPath: string, sourceImagePath: string,
         throw new Error(`failed to mask-crop ${sourceImagePath}: ${new TextDecoder().decode(stderr)}`);
 }
 
-const bandCropImageSource = containedImageSource('derived/band-crops-contained');
+export const bandCropImageSource = containedImageSource('derived/band-crops-contained');
 
 // ---------------------------------------------------------------------------------
 // --- The stages -------------------------------------------------------------------
@@ -349,6 +362,146 @@ export function entryInterpretStage(model = TRANSCRIBE_MODEL): ExtractStage {
 /**/${CONFIDENCE_RULES}`;
         },
     };
+}
+
+// ---------------------------------------------------------------------------------
+// --- Entry assembly (stage C) -----------------------------------------------------
+// ---------------------------------------------------------------------------------
+
+/** Running heads, page numbers and section letters - excluded from
+ *  entries mechanically (textract text: guide words print ALL CAPS,
+ *  page numbers are digit islands). */
+export function isHeaderLine(textractText: string): boolean {
+    const t = textractText.trim();
+    if(/^[A-Z]{1,4}$/.test(t)) return true;
+    return t.length <= 10 && /\d/.test(t) && /^[^A-Za-z]*\d+[^A-Za-z]*$/.test(t);
+}
+
+/** Diacritic-PRESERVING fold for cross-model divergence detection (the
+ *  stage-B letter-level category): markup/ambiguity/spacing-insensitive,
+ *  letters and combining marks exact. */
+export function diacriticFold(s: string): string {
+    return s.replace(/\[([^|\]]*)\|[^\]]*\]/g, '$1')
+        .replace(/[*⁇|]/g, '')
+        .toLowerCase().normalize('NFC')
+        .replace(/[^\p{L}\p{M}]/gu, '');
+}
+
+export interface AssembledLine {
+    printed: number; page_id: number; box_id: number;
+    x: number; y: number; w: number; h: number;
+    textract: string;
+    text: string;            // primary model line (textract fallback when dropped)
+    secondary?: string;      // secondary model line, when a secondary ran
+    divergent: boolean;      // models disagree at letter/diacritic level
+    dropped: boolean;        // primary produced no line (text = textract fallback)
+}
+
+export interface AssembledEntry {
+    printed: number;         // page the entry STARTS on
+    lines: AssembledLine[];
+    text: string;            // primary lines joined
+    divergentLines: number;
+}
+
+export interface AssembleResult {
+    entries: AssembledEntry[];
+    headersSkipped: number;
+    columnJoins: number;     // entries continued across a column/page boundary
+    droppedPrimary: number;
+    divergentLines: number;
+}
+
+/** Retry transient LLM failures (the client has no retry of its own;
+ *  parallel batches turn one 429/529 blip into a hole otherwise). */
+export async function llmRetry<T>(fn: () => Promise<T>): Promise<T> {
+    const delays = [2000, 8000, 20000];
+    for(let attempt = 0; ; attempt++) {
+        try { return await fn(); }
+        catch(e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            const transient = /429|529|overloaded|rate.?limit|timeout|ECONN|network/i.test(msg);
+            if(!transient || attempt >= delays.length) throw e;
+            await new Promise(res => setTimeout(res, delays[attempt]));
+        }
+    }
+}
+
+/** One column's model lines: transcribe per band (bands run in parallel,
+ *  each cached), sequence-align to the textract lines, return the model
+ *  line per textract index. */
+async function columnModelLines(cfg: ExtractConfig, geom: PageGeom, colLines: PageLine[],
+                                stage: ExtractStage, book: string, column: string):
+        Promise<(string|undefined)[]> {
+    const out: (string|undefined)[] = new Array(colLines.length);
+    const bands = bandColumn(colLines, geom.width, geom.height);
+    const bases: number[] = [];
+    let acc = 0;
+    for(const b of bands) { bases.push(acc); acc += b.lines.length; }
+    await Promise.all(bands.map(async (band, bi) => {
+        const crop = await bandCropPath(geom.image_ref, band);
+        const input: BandInput = {book, printed: geom.printed, column,
+                                  expectedLines: band.lines.length};
+        const got: string[] =
+            ((await llmRetry(() => extractStage(cfg, crop, 0, stage, input)) as any)?.lines ?? [])
+            .map(String);
+        for(const p of alignFolded(band.lines.map(l => fold(l.text)), got.map(fold)))
+            if(p.t !== undefined && p.l !== undefined) out[bases[bi] + p.t] = got[p.l];
+    }));
+    return out;
+}
+
+/** Assemble the book's entries over a page range: reading order = page
+ *  ascending, left column then right; entry starts by hanging indent; a
+ *  column whose first body line is NOT a start continues the previous
+ *  entry (the cross-column/cross-page stitch - pages should be
+ *  contiguous for the stitches to be real). */
+export async function assembleBook(cfg: ExtractConfig, book: string, pages: number[],
+                                   primary: ExtractStage, secondary: ExtractStage|undefined,
+                                   log: (m: string) => void): Promise<AssembleResult> {
+    const r: AssembleResult = {entries: [], headersSkipped: 0, columnJoins: 0,
+                               droppedPrimary: 0, divergentLines: 0};
+    let current: AssembledEntry|undefined;
+    for(const printed of pages) {
+        const geom = pageGeometry(book, printed);
+        const {left, right} = splitColumns(geom.lines, geom.width);
+        for(const [column, colLines] of [['left', left], ['right', right]] as const) {
+            const [pri, sec] = await Promise.all([
+                columnModelLines(cfg, geom, colLines, primary, book, column),
+                secondary === undefined ? Promise.resolve(undefined)
+                    : columnModelLines(cfg, geom, colLines, secondary, book, column)]);
+            const starts = entryStarts(colLines, geom.width);
+            let firstBody = true;
+            for(let i = 0; i < colLines.length; i++) {
+                const tx = colLines[i];
+                if(isHeaderLine(tx.text)) { r.headersSkipped++; continue; }
+                const p = pri[i], s = sec?.[i];
+                if(p === undefined) r.droppedPrimary++;
+                const divergent = p !== undefined && s !== undefined &&
+                    diacriticFold(p) !== diacriticFold(s);
+                if(divergent) r.divergentLines++;
+                const line: AssembledLine = {
+                    printed, page_id: geom.page_id, box_id: tx.box_id,
+                    x: tx.x, y: tx.y, w: tx.w, h: tx.h,
+                    textract: tx.text, text: p ?? tx.text, secondary: s,
+                    divergent, dropped: p === undefined};
+                if(starts[i] || current === undefined) {
+                    current = {printed, lines: [line], text: '', divergentLines: 0};
+                    r.entries.push(current);
+                } else {
+                    if(firstBody) r.columnJoins++;
+                    current.lines.push(line);
+                }
+                firstBody = false;
+            }
+        }
+        log(`${book} printed ${printed}: ${r.entries.length} entries so far`);
+    }
+    for(const e of r.entries) {
+        e.text = e.lines.map(l => l.text).join('\n');
+        e.divergentLines = e.lines.filter(l => l.divergent).length;
+    }
+    return r;
 }
 
 // ---------------------------------------------------------------------------------

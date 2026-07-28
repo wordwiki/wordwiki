@@ -168,7 +168,12 @@ export function entryKeys(schema: model.Schema, e: any): Array<{kind: KeyKind, k
     const add = (kind: KeyKind, key: string) => {
         if(key.length >= 2) out.set(`${kind} ${key}`, {kind, key});
     };
-    for(const h of schemaRoles.headwordsAllLanes(schema, e)) {
+    // Headword-role spellings PLUS source-orthography texts (rand's
+    // example_text lane): both are spellings of the entry, and the
+    // source lane is the only one another source-era book (Clark) can
+    // collide with - without it, rand entries are invisible to Clark.
+    for(const h of [...schemaRoles.headwordsAllLanes(schema, e),
+                    ...schemaRoles.sourceOrthographyTexts(schema, e)]) {
         const sk = skeleton(h.text, h.variant);
         const all = [sk, ...transliteratedSkeletons(h.text, h.variant)];
         for(const x of all) add('skel', x);

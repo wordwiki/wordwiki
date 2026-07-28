@@ -57,6 +57,7 @@ import { normalizeShoeboxDates } from './creation-dates.ts';
 import { getWordWiki, createAllTables } from './wordwiki.ts';
 import * as transcribe from './transcribe.ts';
 import * as pageTranscribe from './page-transcribe.ts';
+import * as clarkImport from './clark-import.ts';
 import { buildPublishSource, buildAllPublishSources, publishSourceFromJson, publishSourceToPublicJson, writeFullHistoryDump } from './publish-source.ts';
 
 export async function cliMain(args: string[]): Promise<void> {
@@ -1134,7 +1135,8 @@ export async function cliMain(args: string[]): Promise<void> {
                     const spellingsOf = (dict: string, id: number) => {
                         const store = ww.storeFor(dict);
                         const e = store.entriesById.get(id);
-                        return e ? schemaRoles.headwordsAllLanes(store.dictSchema, e) : [];
+                        return e ? [...schemaRoles.headwordsAllLanes(store.dictSchema, e),
+                                    ...schemaRoles.sourceOrthographyTexts(store.dictSchema, e)] : [];
                     };
                     const ruled = similarityRules.ruleVerdicts(a, b, cands, {spellingsOf});
                     toJudge = similarityRules.referralCandidates(cands, ruled);
@@ -1183,7 +1185,8 @@ export async function cliMain(args: string[]): Promise<void> {
                 const spellingsOf = (dict: string, id: number) => {
                     const store = ww.storeFor(dict);
                     const e = store.entriesById.get(id);
-                    return e ? schemaRoles.headwordsAllLanes(store.dictSchema, e) : [];
+                    return e ? [...schemaRoles.headwordsAllLanes(store.dictSchema, e),
+                                    ...schemaRoles.sourceOrthographyTexts(store.dictSchema, e)] : [];
                 };
                 const pairs = similarityRules.ruleVerdicts(a, b, cands, {spellingsOf});
                 const headwordOf = (dict: string, id: number): string => {
@@ -1399,6 +1402,31 @@ export async function cliMain(args: string[]): Promise<void> {
                 ww.ensureNewStyleTables();
                 await pageTranscribe.transcribeSurvey({book, pages, interpretPerPage,
                                                        reportPath, jsonPath, model});
+            });
+            Deno.exit(0);
+            break;
+        }
+
+        // CLARK IMPORT (clark-import.ts; design doc stage C): assemble +
+        // interpret the dev-band pages (all LLM work memoized - re-runs
+        // free) and land the `clark` reference dictionary: wiped +
+        // rebuilt each run (import-mirror semantics), content-keyed ids,
+        // per-entry bounding groups on the Tagging:clark sheet.
+        //   ./wordwiki.sh clark-import [--pages=1-25]
+        //                 [--report=../clark/import-dev.md]
+        case 'clark-import': {
+            const argOf = (name: string, dflt: string) =>
+                args.find(a => a.startsWith(`--${name}=`))?.slice(name.length + 3) ?? dflt;
+            const pagesArg = argOf('pages', '1-25');
+            const range = pagesArg.match(/^(\d+)-(\d+)$/);
+            const pages = range
+                ? Array.from({length: Number(range[2]) - Number(range[1]) + 1},
+                             (_, i) => Number(range[1]) + i)
+                : pagesArg.split(',').map(Number);
+            const reportPath = argOf('report', '../clark/import-dev.md');
+            await security.runSystem(async () => {
+                ww.ensureNewStyleTables();
+                await clarkImport.importClark({pages, reportPath});
             });
             Deno.exit(0);
             break;

@@ -113,7 +113,8 @@ export function pairRandMmo(ww: WordWiki, opts: {apply?: boolean} = {}): PairRun
     const spellingsOf = (dict: string, id: number) => {
         const store = ww.storeFor(dict);
         const e = store.entriesById.get(id);
-        return e ? schemaRoles.headwordsAllLanes(store.dictSchema, e) : [];
+        return e ? [...schemaRoles.headwordsAllLanes(store.dictSchema, e),
+                                    ...schemaRoles.sourceOrthographyTexts(store.dictSchema, e)] : [];
     };
     const ruled = rules.ruleVerdicts(RAND_TABLE, MMO_TABLE, cands, {spellingsOf});
     const plan = planPairs(ruled, {
