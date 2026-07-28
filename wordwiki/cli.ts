@@ -1046,8 +1046,24 @@ export async function cliMain(args: string[]): Promise<void> {
                 const names = args.slice(1).filter(a => !a.startsWith('--'));
                 const targets = names.length > 0 ? names : ww.dictionaries();
                 for(const t of targets) {
+                    // Raw IMPORT MIRRORS are excluded by default: their
+                    // per-line entries are one-key blocking noise, and
+                    // their workspaces are the biggest of all.  Naming
+                    // one explicitly still indexes it.
+                    if(names.length === 0
+                       && dictionaryConfig.readConfigValue(t, 'import_mirror') === 'true') {
+                        similarity.ensureSimilarityTables();
+                        db().execute(
+                            `DELETE FROM similarity_key WHERE dictionary = :d`, {d: t});
+                        console.info(`similarity index '${t}': skipped (import mirror), stale keys cleared`);
+                        continue;
+                    }
                     const r = similarity.rebuildSimilarityIndex(ww.storeFor(t));
                     console.info(`similarity index '${t}': ${r.entries} entries, ${r.keys} keys`);
+                    // Release the workspace before the next dictionary -
+                    // the cumulative footprint of all workspaces at once
+                    // is what blew the default heap.
+                    ww.storeFor(t).requestWorkspaceReload();
                 }
             });
             Deno.exit(0);

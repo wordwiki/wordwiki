@@ -505,8 +505,12 @@ indexes the skeleton of its rule-rendering in each registered target lane
 (as plain 'skel' keys, so cross-lane joins need no query change).  After
 rebuild: rand 109,080 keys (the watson lanes fan out), dict 83,721;
 verified live - rand 'keknasimkewey' (wsf) indexes 'gegnasimgewei' and
-will block against modern spellings.  Ops note: similarity-rebuild now
-OOMs the default 4GB deno heap while loading randraw at current db size -
-run with DENO_V8_FLAGS=--max-old-space-size=8192 (randraw is 31,723
-entries for 31,592 useless one-key rows; excluding raw import tables from
-the index would fix both noise and memory - decision pending).
+will block against modern spellings.  Ops note (RESOLVED): the rebuild
+briefly OOMed the default 4GB heap - the cause was CUMULATIVE workspaces
+(storeFor caches each dictionary's ~1GB workspace and the loop never
+released them; ~4KB retained per assertion row across 1M rows, vs ~14MB
+of actual text).  Fixed two ways: import-mirror dictionaries (randraw)
+are now SKIPPED by default (their per-line entries were 31,592 one-key
+blocking-noise rows, since cleared; an explicit name still indexes one),
+and the loop releases each workspace via requestWorkspaceReload before
+the next.  Full rebuild fits the default heap again.
