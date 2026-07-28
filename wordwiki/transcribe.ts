@@ -611,6 +611,11 @@ export interface TranscribeEvalOptions {
     book: string;
     sample: number;
     offset: number;
+    model?: string;         // override every stage's model (arm runs for
+                            // the confidence-gated-escalation analysis)
+    structuringModel?: string;  // override for the rse/rne stages only
+                                // (the mixed policy: cheap letters, strong
+                                // structuring)
     reportPath?: string;    // side-by-side markdown (the quick CLI artifact)
     jsonPath?: string;      // the batch DATA (the html is a pure function of it)
     htmlPath?: string;      // self-contained REVIEW PAGE (research-group shareable)
@@ -648,6 +653,11 @@ export async function transcribeEval(opts: TranscribeEvalOptions): Promise<void>
         `e${PROMPT_VERSION_EXPAND}/x${PROMPT_VERSION_TRANSLITERATE}`);
 
     const recipe = pdmRecipe();
+    if(opts.model) for(const st of recipe) st.model = opts.model;
+    if(opts.structuringModel)
+        for(const st of recipe)
+            if(st.name === 'source-as-entry' || st.name === 'normalize')
+                st.model = opts.structuringModel;
     const results: Array<{item: EvalItem, crop: string,
                           stages: Record<string, {text: string, tagged?: string,
                                                   confidence: number, sim?: number,

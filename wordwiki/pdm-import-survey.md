@@ -262,6 +262,32 @@ transliterate prompt is FLAT (58.8 vs 60.3) - the strict ceiling there
 is the gold's normalization layer, now explicitly owned by these
 stages (transliteration-findings.md Part 4).
 
+## Confidence-gated escalation, measured (2026-07-28)
+
+Three chain-consistent arms on the 25-ref sample + an analytic frontier
+(mixing per-ref between the cached arms by sonnet transcribe-confidence):
+
+| arm | transcribe | translit | rse | rne | cost vs all-opus |
+|---|---|---|---|---|---|
+| all-sonnet | 78.7 | 58.7 | 38.0 | 39.1 | 20% |
+| mixed: sonnet letters + opus structuring | 78.7 | 58.7 | 45.7 | 45.8 | ~35% |
+| escalate whole-ref at transcribe-conf<40 | **81.0** | 58.1 | 44.6 | 44.8 | 58% |
+| all-opus | 79.9 | 58.8 | **50.4** | **53.7** | 100% |
+
+Findings: (1) Sonnet is at PARITY on the token-heavy vision stages
+(transcribe/transliterate) - the big spend - and weaker only on the
+cheap text-only structuring stages, where Opus stays; (2) the
+confidence gate is REAL: sonnet transcribe below c45 scores 68.6 vs
+90.6 at/above, and escalating the low tail BEATS all-opus on transcribe
+(81.0 vs 79.9) because each model wins its own regime; (3) opus
+structuring on a sonnet chain recovers only part of the all-opus gap
+(45.7 vs 50.4) - PIPELINE INHERITANCE again: the structuring stages are
+bounded by their inputs.  PRODUCTION POLICY: sonnet letter stages with
+whole-ref opus escalation at transcribe-conf < ~40-45, opus structuring
+always - quality >= all-opus on transcribe, near-opus elsewhere, at
+roughly half the cost.  transcribe-eval now takes --model /
+--structuring-model / --nojudge for arm runs.
+
 ## Suggested next steps (in order)
 
 1. Segmentation pilot: 10 gold pages, geometry+LLM hybrid vs the hand

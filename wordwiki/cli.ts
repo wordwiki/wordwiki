@@ -1369,10 +1369,14 @@ export async function cliMain(args: string[]): Promise<void> {
             // serves them at /resources/... (Reports menu links the page).
             const jsonPath = argOf('json', 'resources/transcribe-eval.json');
             const htmlPath = argOf('html', 'resources/transcribe-eval.html');
+            const model = argOf('model', '') || undefined;
+            const structuringModel = argOf('structuring-model', '') || undefined;
+            const judge = !args.includes('--nojudge');
             await security.runSystem(async () => {
                 ww.ensureNewStyleTables();
                 await transcribe.transcribeEval({book, sample, offset, reportPath,
-                                                 jsonPath, htmlPath});
+                                                 jsonPath, htmlPath, model,
+                                                 structuringModel, judge});
             });
             Deno.exit(0);
             break;
