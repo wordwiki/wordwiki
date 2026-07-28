@@ -609,3 +609,86 @@ are exactly the synonym-bridge tier ('regard'↔'think highly of',
 extrapolation: ~4,800 same-word pairs waiting in the band (sampling
 caveat: first-50 clusters, not random).  1 failed cluster, retryable
 free.
+
+## Part 4 — Pacifique → Listuguj (pm-li): the derived phonology (2026-07-28)
+
+Derived from the 1,260 PDM ref gold pairs (hand rtr transcription ↔ hand
+rtl Listuguj; `pdmRefCorpus`), by the same measured-rules program: the
+harness's ranked miss-miner on the train folds, holdout untouched.
+Rules: `mikmaq/pacifique-transliterate.ts` (rules-v3); identity 6% →
+26.6% train / **30.3% holdout** exact, top-4 candidates **34.0%**
+(holdout ≥ train — no overfit).  Counts below are train-fold evidence.
+
+### What Pacifique's orthography encodes — and what it omits
+
+1. **Vowel length is UNWRITTEN.**  The single largest residual class
+   (~260 needed apostrophe insertions, contexts a_t/a_s/e_g/i_g) is the
+   Listuguj length mark Pacifique simply has no symbol for.  Where the
+   hand transcription carries his sporadic diacritics: macron = length
+   (ā→a', ī→i', ē→e'; ×40+17 families), breve = short (ŏ→o, ×28) — but
+   ō before g/m folds plain (×28 delete-' backout).  CONSEQUENCE: length
+   is an AMBIGUITY, not a rule — `pmLiPattern` branches ' at [aei]
+   before [tsgq], plain-first rank.  This is the pm-li analog of
+   watson-sf's schwa branching.
+
+2. **One letter 'o' covers /u/ and /o/.**  Default o→u (×427+×278; the
+   commonest correspondence in the corpus) — EXCEPT adjacent to the
+   uvular q, where Listuguj keeps o on BOTH sides (oqo family; the u→o
+   backout after q, ×64: q_n/q_l/q_m).  Uvular adjacency colors the
+   vowel; the rule must run after uvularity is decided.
+
+3. **Prevocalic o/u is the glide /w/** (×363+×76): oa→wa, oe→we, word-
+   initial too (^_a ×70); after g the split is gwa/gwe but gui (goi→gui,
+   the front vowel keeps u — ×31 w→u backout in g_i).  eol→ewul (×48,
+   e_l): the o is glide AND vowel — an epenthetic u rides the w.
+
+4. **One letter 'g' covers velar /k~g/ and uvular /q/.**  Measured: g→q
+   after a before a/t/s/p/end (a_a ×115 is the strongest single signal
+   in the corpus) and og→oq in the oqo family — but ag before i/w/n/u
+   STAYS velar (×44 q→g backout: fronting contexts).  sg→sq did NOT
+   survive measurement (s_i ×21 + s_a ×16 net-negative — backed out).
+   Word-final -og is genuinely split: mostly /ug/ (×57 og$→ug), some
+   /oq/ — an ambiguity candidate, not a rule.
+
+5. **tj is the palatal /dʒ/ → j** (×118, all positions incl. word-
+   initial).  In e_j/i_j contexts a trace apostrophe sometimes appears
+   (etj → e'j, ×15 t→') — likely the length mark surfacing again, not a
+   separate phenomenon.
+
+6. **Unstressed-e syncope**: Pacifique spells out vowels Listuguj
+   elides — tem→tm (×37 t_m), gen→gn, gem→gm, gel→gl, nem→nm (×124
+   round 1 + ×101 residual medial).  Some e's instead surface as the
+   schwa apostrophe (e→', ×52, l_g/t_s contexts) — under-derived,
+   linguist review welcome.
+
+7. **Codepoint hygiene**: the hand gold mixes ' and ’ for the same
+   mark — the corpus extractor folds both to ASCII ' (68 gloss-leak
+   pairs are also filtered there).
+
+### The NORMALIZATION gap (not phonology — but it bounds every score)
+
+The rtl gold is not a letter-mapping of the rtr: the researcher
+routinely REGULARIZES — inflection normalized (ewuljewe'ji →
+ewuljewe'jit "he/she is..."), entry forms chosen, word joins/splits.
+Letter rules cannot reach those decisions; this is why rules plateau
+~30% strict and why injecting the rules draft into the LLM transliterate
+stage was FLAT (58.8% vs 60.3 baseline, judged equivalence 66
+unchanged).  The strict-sim ceiling on this stage largely measures the
+gold's normalization layer.  That layer's real home is the
+INTERPRETATION stage (rse/rne gold, ~980 entries), where normalization
+is the explicit task.
+
+### Where the pair pays regardless
+
+Candidates/blocking keys for pdm→MMO similarity joins (the import-flow
+binding), orthoMatch evidence, and the deterministic per-word draft
+shown at selection time in the import UI.  Same role as the watson
+pairs; the LLM stage keeps its own counsel.
+
+### For the linguist review pass
+
+- The length-ambiguity positions ([aei] before [tsgq]) — is the
+  plain-first ranking right, or is length predictable from stress?
+- The final -og split (/ug/ vs /oq/) — conditioned by anything?
+- The e→' schwa class (l_g, t_s contexts) — real rule or noise?
+- ag before i/w/n/u staying velar — confirm the fronting reading.
