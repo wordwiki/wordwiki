@@ -35,6 +35,12 @@ export interface LanguageRules {
     /** Curated KNOWN ROOTS: a shared root INSIDE both words + meaning
      *  overlap = a root family.  The linguist's growing data. */
     rootLexicon: Array<{root: string, sense: string}>;
+    /** MEASURED single-substitution dialect correspondences (2-char
+     *  strings, unordered pairs, consonants; vowels are implicit) - from
+     *  the counterpart corpus: g<->q 27, l<->n 7, u<->w 5 of 288 aligned
+     *  single-sub pairs.  A near pair whose ONE diff is such a
+     *  correspondence + meaning agreement is same-word HIGH. */
+    dialectSubs?: string[];
     minStem: number;
     prefixStrong: number;          // shared initial >= this = family evidence
     prefixWeak: number;            //   ... >= this counts only with meaning
@@ -74,6 +80,30 @@ export function sharedPrefixLen(a: string, b: string): number {
     let i = 0;
     while(i < a.length && i < b.length && a[i] === b[i]) i++;
     return i;
+}
+
+/** The single aligned substitution between two same-length skeletons,
+ *  as 'x<->y' - undefined when lengths differ or diffs != 1. */
+function singleSub(a: string, b: string): [string, string]|undefined {
+    if(a.length !== b.length || a === b) return undefined;
+    let found: [string, string]|undefined = undefined;
+    for(let i = 0; i < a.length; i++)
+        if(a[i] !== b[i]) {
+            if(found) return undefined;
+            found = [a[i], b[i]];
+        }
+    return found;
+}
+
+const VOWELS_SET = new Set('aeiouɨ');
+
+function dialectSub(a: string, b: string, rules: LanguageRules): string|undefined {
+    const sub = singleSub(a, b);
+    if(!sub) return undefined;
+    const [x, y] = sub;
+    if(VOWELS_SET.has(x) && VOWELS_SET.has(y)) return `${x}<->${y}`;
+    const key = x < y ? x + y : y + x;
+    return (rules.dialectSubs ?? []).includes(key) ? `${x}<->${y}` : undefined;
 }
 
 function nearSkeleton(a: string, b: string, rules: LanguageRules): boolean {
@@ -155,6 +185,19 @@ export function ruleVerdict(probe: EntrySimKeys, target: EntrySimKeys,
         return {verdict: 'ambiguous', confidence: 'low',
                 rule: `xlit-${spellGrade}+disjoint-defs`};
     }
+
+    // --- 2a. MEASURED dialect correspondence -------------------------------------
+    // One aligned substitution, and it is a measured Rand-era<->modern
+    // correspondence (any vowel pair; listed consonant pairs), plus
+    // meaning agreement: practically an exact match written in two
+    // dialects - HIGH, with the correspondence named for the reviewer.
+    if(defOverlap.length > 0)
+        for(const ps of probe.skels) for(const ts of target.skels) {
+            const d = dialectSub(ps, ts, rules);
+            if(d !== undefined)
+                return {verdict: 'same-word', confidence: 'high',
+                        rule: 'dialect-sub+def-overlap', qualifier: d};
+        }
 
     // --- 2. NEAR skeleton -------------------------------------------------------
     const near = probe.skels.some(ps => target.skels.some(ts => nearSkeleton(ps, ts, rules)));

@@ -13,6 +13,30 @@ const ev = (kind: 'skel'|'def'|'cat', key: string, df: number) =>
     ({kind, key, df, weight: 1});
 const keys = (skels: string[], defs: string[]) => ({skels, defs});
 
+test("rules: measured dialect correspondences", () => {
+    // g<->q with meaning agreement: same-word HIGH, correspondence named.
+    assertEquals(rules.ruleVerdict(
+        {skels: ['tgopej'], defs: ['twin']}, {skels: ['tqopej'], defs: ['twin']},
+        [ev('def', 'twin', 2)]),
+        {verdict: 'same-word', confidence: 'high',
+         rule: 'dialect-sub+def-overlap', qualifier: 'g<->q'});
+    // Any vowel pair counts (naspit/nespit).
+    assertEquals(rules.ruleVerdict(
+        {skels: ['naspit'], defs: ['attach']}, {skels: ['nespit'], defs: ['attach']},
+        [ev('def', 'attach', 2)]).rule, 'dialect-sub+def-overlap');
+    // An UNMEASURED consonant sub (s<->g) is not high - it falls to the
+    // ordinary near rules (medium with overlap).
+    assertEquals(rules.ruleVerdict(
+        {skels: ['wissugwalatl'], defs: ['cook']},
+        {skels: ['wisgugwalatl'], defs: ['cook']},
+        [ev('def', 'cook', 5)]),
+        {verdict: 'same-word', confidence: 'medium', rule: 'near-skel+def-overlap'});
+    // No meaning agreement: the correspondence claims nothing.
+    const r = rules.ruleVerdict(
+        {skels: ['tgopej'], defs: ['twin']}, {skels: ['tqopej'], defs: ['doorway']}, []);
+    assert(r.rule !== 'dialect-sub+def-overlap', r.rule);
+});
+
 test("rules: consonant skeleton catches syncope", () => {
     // gstlg == gstlg with 'eat' shared -> same-word medium.
     assertEquals(rules.ruleVerdict(

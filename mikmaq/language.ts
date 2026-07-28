@@ -44,7 +44,7 @@ export const MIKMAQ_NORMALIZERS: Record<string, OrthoNormalizer> = {
 /** The Mi'gmaq similarity morphology (language rules v2 - the version
  *  bumps whenever a list or threshold changes; reports carry it). */
 export const MIKMAQ_RULES: LanguageRules = {
-    version: 2,
+    version: 3,
 
     // Verb/paradigm FINALS in skeleton space: inflectional endings whose
     // removal exposes a comparable stem.  Longest-match wins; the stem
@@ -70,6 +70,12 @@ export const MIKMAQ_RULES: LanguageRules = {
         {root: 'gim',  sense: 'count'},
         {root: 'nesp', sense: 'along with/simultaneously'},
     ],
+
+    // Measured on the landed counterpart corpus (288 aligned single-sub
+    // pairs): g<->q 27 (uvularity), l<->n 7 (sonorant), u<->w 5 (glide).
+    // g<->t (8) EXCLUDED: word-final -g/-t is inflection (animacy), not
+    // dialect.
+    dialectSubs: ['gq', 'ln', 'uw'],
 
     minStem: 4,
     prefixStrong: 5,

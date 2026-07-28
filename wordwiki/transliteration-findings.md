@@ -561,3 +561,29 @@ consonant SUBSTITUTION (its 'cook' bridge sits at df 91 > form 25), the
 dialect-correspondence lever, not a syncope case.  Pairing dry run:
 plan 3,185 vs 2,679 landed (+506 new pairs, 323 multi-match worklist) -
 apply awaiting dz.
+
+### The dialect-correspondence widening (2026-07-27)
+
+Measured first (288 aligned single-substitution pairs among the 3,163
+landed counterparts): vowels dominate (a↔e 66, e↔i 63, a↔o 41 - all
+already folded by cskel); the real consonant correspondences are
+**g↔q 27, l↔n 7, u↔w 5**; g↔t (8) EXCLUDED as inflection (-g/-t
+animacy finals).  s↔g (wissugwalatl) is <= 2 - too rare to bet a table
+on, which set the design:
+
+- **Blocking**: symmetric-delete 'cskel1' keys (cskel + every single-
+  consonant deletion, length-guarded, form 12 / corroborate 40) - ANY
+  single consonant edit meets, table-free.  wissugwalatl finally blocks
+  against wisgugwalatl (shared keys at df 6).
+- **Verdict**: language rules v3 gain dialectSubs ['gq','ln','uw']; new
+  rule 2a: one aligned substitution that is a measured correspondence
+  (any vowel pair; listed consonants) + meaning agreement -> same-word
+  HIGH with the correspondence NAMED as qualifier.  Unmeasured subs
+  (s↔g) still resolve via ordinary near-skel (medium) - the table earns
+  confidence, the neighborhood earns recall.
+
+Measured rand↔dict: index rand 479,573 keys (~3×, the neighborhoods);
+candidates 65,919 → 99,651; same-word 3,584 → **4,006** (+12%;
+dialect-sub+def-overlap fired 346, all named for review); referral band
+9,854.  Pairing dry run: plan 3,477 vs 3,185 landed (+292) - apply
+awaiting dz.

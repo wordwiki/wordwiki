@@ -41,6 +41,17 @@ test("definitionTokens: stopwords out, plurals + light stemming, deduped", () =>
     assertEquals(sim.definitionTokens('freezing'), sim.definitionTokens('freeze'));
 });
 
+test("cskelNeighborhood: one consonant edit meets", () => {
+    const a = sim.cskelNeighborhood(sim.consonantSkeleton('wissugwalatl'));
+    const b = sim.cskelNeighborhood(sim.consonantSkeleton('wisgugwalatl'));
+    assert(a.some(k => b.includes(k)), 'substitution shares a delete-1 key');
+    // Insertion/deletion too: the shorter's full cskel is in the set.
+    const c = sim.cskelNeighborhood('gstlg');
+    assert(c.includes('gstlg') && c.includes('stlg'));
+    // Too short to neighborhood.
+    assertEquals(sim.cskelNeighborhood('gsg'), []);
+});
+
 test("consonantSkeleton: syncope-proof", () => {
     assertEquals(sim.consonantSkeleton(sim.skeleton("g's'talg", 'mm-li')),
                  sim.consonantSkeleton(sim.skeleton('gisatalg', 'watson-li')));
@@ -120,6 +131,7 @@ test("index + blocking: exact-skel forms; rare defs form; common defs corroborat
             // corroborate.  'kettle'/'bark' are rare - they form.
             const limits = {skel: {form: 3, corroborate: 10},
                             cskel: {form: 0, corroborate: 0},
+                            cskel1: {form: 0, corroborate: 0},
                             def:  {form: 3, corroborate: 10},
                             cat:  {form: 0, corroborate: 10}};
             const cands = sim.candidatePairs('sima', 'simb', {limits});
@@ -145,6 +157,7 @@ test("index + blocking: exact-skel forms; rare defs form; common defs corroborat
             const self = sim.candidatePairs('simb', 'simb', {limits: {
                 skel: {form: 3, corroborate: 10},
                 cskel: {form: 0, corroborate: 0},
+                cskel1: {form: 0, corroborate: 0},
                 def:  {form: 2, corroborate: 10},
                 cat:  {form: 0, corroborate: 10}}});
             assert(self.every(c => c.entry_id !== c.target_entry_id), 'no self pairs');
