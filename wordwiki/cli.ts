@@ -56,6 +56,7 @@ import { backfillPublication } from './publication-backfill.ts';
 import { normalizeShoeboxDates } from './creation-dates.ts';
 import { getWordWiki, createAllTables } from './wordwiki.ts';
 import * as transcribe from './transcribe.ts';
+import * as pageTranscribe from './page-transcribe.ts';
 import { buildPublishSource, buildAllPublishSources, publishSourceFromJson, publishSourceToPublicJson, writeFullHistoryDump } from './publish-source.ts';
 
 export async function cliMain(args: string[]): Promise<void> {
@@ -1368,6 +1369,32 @@ export async function cliMain(args: string[]): Promise<void> {
                 ww.ensureNewStyleTables();
                 await transcribe.transcribeEval({book, sample, offset, reportPath,
                                                  jsonPath, htmlPath});
+            });
+            Deno.exit(0);
+            break;
+        }
+
+        // Layer-1 page transcription SURVEY (page-transcribe.ts;
+        // clark-import-design.md stage A): band-transcribe whole printed
+        // pages from the scans + textract geometry, score against the
+        // textract fold, measure the rand headword join rate, and taste
+        // layer-2 interpretation on a few entries.  READ-ONLY; every LLM
+        // call memoised in the derived store - re-runs are free until a
+        // prompt version bumps.
+        //   ./wordwiki.sh transcribe-survey [--book=Clark]
+        //                 [--pages=1,40,85,130,170] [--interpret=3]
+        //                 [--report=../clark/transcribe-survey.md]
+        case 'transcribe-survey': {
+            const argOf = (name: string, dflt: string) =>
+                args.find(a => a.startsWith(`--${name}=`))?.slice(name.length + 3) ?? dflt;
+            const book = argOf('book', 'Clark');
+            const pages = argOf('pages', '1,40,85,130,170').split(',').map(Number);
+            const interpretPerPage = Number(argOf('interpret', '3'));
+            const reportPath = argOf('report', '../clark/transcribe-survey.md');
+            await security.runSystem(async () => {
+                ww.ensureNewStyleTables();
+                await pageTranscribe.transcribeSurvey({book, pages, interpretPerPage,
+                                                       reportPath});
             });
             Deno.exit(0);
             break;
