@@ -333,8 +333,64 @@ function transliterateStage(): ExtractStage {
     };
 }
 
+export const PROMPT_VERSION_SOURCE_AS_ENTRY = 1;
+export const PROMPT_VERSION_NORMALIZE = 1;
+
+/** The STRUCTURING rungs (pdm-import-survey.md: the rse/rne gold the
+ *  researcher produces after transliterating) - where NORMALIZATION
+ *  lives, deliberately downstream of the letter-level stages (the
+ *  transliteration findings Part 4: strict-sim on the transliterate
+ *  stage is bounded by exactly these decisions). */
+function sourceAsEntryStage(): ExtractStage {
+    return {
+        name: 'source-as-entry', model: '', promptVersion: PROMPT_VERSION_SOURCE_AS_ENTRY,
+        imageBox: 1600,
+        schema: textStageSchema('source_as_entry',
+            'the entry restated as a clean modern dictionary line'),
+        prompt: (input: any) => block`
+/**/Below is the transliterated working version of one entry from Father
+/**/Pacifique's Mi'gmaq-French dictionary (Listuguj orthography, English
+/**/glosses).  Restate it as the SOURCE-AS-ENTRY: one clean dictionary
+/**/line - the Listuguj word EXACTLY as transliterated (do NOT change its
+/**/inflection), a comma, then a concise natural-English gloss.
+/**/- Verb forms are usually FIRST PERSON as Pacifique wrote them: make
+/**/  the gloss say so ("I am...", "I do...").
+/**/- Drop citations, French leftovers and page references from the line.
+/**/- Keep [a|b] / ⁇ uncertainty if it affects the word itself.
+/**/${CONFIDENCE_RULES}
+/**/
+/**/Transliterated entry:
+/**/${String(input?.transliteration ?? '')}`,
+    };
+}
+
+function normalizeStage(): ExtractStage {
+    return {
+        name: 'normalize', model: '', promptVersion: PROMPT_VERSION_NORMALIZE,
+        imageBox: 1600,
+        schema: textStageSchema('normalized_entry',
+            'the source-as-entry regularized to the modern citation form'),
+        prompt: (input: any) => block`
+/**/Below is a source-as-entry line from Father Pacifique's Mi'gmaq
+/**/dictionary (Listuguj orthography).  Produce the NORMALIZED entry: the
+/**/form a modern dictionary would cite.
+/**/- Verbs: regularize to the THIRD PERSON citation form where that is
+/**/  the convention (e.g. ewuljewe'ji "I am a poor frail one" ->
+/**/  ewuljewe'jit, "he/she is a poor frail one") - adjust the gloss to
+/**/  match.
+/**/- Regularize spelling to modern Listuguj conventions where the
+/**/  transliteration left archaic residue.
+/**/- One clean line: word, comma, gloss.
+/**/${CONFIDENCE_RULES}
+/**/
+/**/Source-as-entry:
+/**/${String(input?.source_as_entry ?? '')}`,
+    };
+}
+
 export function pdmRecipe(): ExtractRecipe {
-    return [transcribeStage(), expandStage(), transliterateStage()];
+    return [transcribeStage(), expandStage(), transliterateStage(),
+            sourceAsEntryStage(), normalizeStage()];
 }
 
 // ---------------------------------------------------------------------------------
@@ -513,7 +569,8 @@ function similarityOver(normalize: (s: string) => string,
 export interface EvalItem {
     ref_id: number;
     bounding_group_id: number;
-    hand: {transcription: string, expanded?: string, transliteration?: string};
+    hand: {transcription: string, expanded?: string, transliteration?: string,
+           sourceAsEntry?: string, normalized?: string};
 }
 
 /** The gold sample: refs in `book` (by the group's document) carrying a
@@ -522,12 +579,15 @@ export interface EvalItem {
 export function goldSample(book: string, sample: number, offset: number): EvalItem[] {
     const EOT = 9007199254740991;
     const rows = db().all<{ref_id: number, grp: number,
-                           tr: string|null, ex: string|null, tl: string|null}, any>(
+                           tr: string|null, ex: string|null, tl: string|null,
+                           se: string|null, ne: string|null}, any>(
         block`
 /**/   SELECT r.id AS ref_id, r.attr1 AS grp,
 /**/          (SELECT t.attr1 FROM dict t WHERE t.ty='rtr' AND t.id3=r.id AND t.valid_to=:eot ORDER BY t.order_key LIMIT 1) tr,
 /**/          (SELECT t.attr1 FROM dict t WHERE t.ty='rex' AND t.id3=r.id AND t.valid_to=:eot ORDER BY t.order_key LIMIT 1) ex,
-/**/          (SELECT t.attr1 FROM dict t WHERE t.ty='rtl' AND t.id3=r.id AND t.valid_to=:eot ORDER BY t.order_key LIMIT 1) tl
+/**/          (SELECT t.attr1 FROM dict t WHERE t.ty='rtl' AND t.id3=r.id AND t.valid_to=:eot ORDER BY t.order_key LIMIT 1) tl,
+/**/          (SELECT t.attr1 FROM dict t WHERE t.ty='rse' AND t.id3=r.id AND t.valid_to=:eot ORDER BY t.order_key LIMIT 1) se,
+/**/          (SELECT t.attr1 FROM dict t WHERE t.ty='rne' AND t.id3=r.id AND t.valid_to=:eot ORDER BY t.order_key LIMIT 1) ne
 /**/     FROM dict r
 /**/     JOIN bounding_group bg ON r.attr1 = bg.bounding_group_id
 /**/     JOIN scanned_document d ON bg.document_id = d.document_id
@@ -542,7 +602,9 @@ export function goldSample(book: string, sample: number, offset: number): EvalIt
         .map(r => ({ref_id: r.ref_id, bounding_group_id: r.grp,
                     hand: {transcription: r.tr!,
                            expanded: r.ex ?? undefined,
-                           transliteration: r.tl ?? undefined}}));
+                           transliteration: r.tl ?? undefined,
+                           sourceAsEntry: r.se ?? undefined,
+                           normalized: r.ne ?? undefined}}));
 }
 
 export interface TranscribeEvalOptions {
@@ -557,7 +619,8 @@ export interface TranscribeEvalOptions {
 }
 
 const STAGE_FIELD: Record<string, keyof EvalItem['hand']> =
-    {transcribe: 'transcription', expand: 'expanded', transliterate: 'transliteration'};
+    {transcribe: 'transcription', expand: 'expanded', transliterate: 'transliteration',
+     'source-as-entry': 'sourceAsEntry', normalize: 'normalized'};
 
 export async function transcribeEval(opts: TranscribeEvalOptions): Promise<void> {
     const log = opts.log ?? ((m: string) => console.info(m));
@@ -621,9 +684,12 @@ export async function transcribeEval(opts: TranscribeEvalOptions): Promise<void>
             input = out;
             const field = STAGE_FIELD[stage.name];
             // Stages 1-2 return language-tagged RUNS; the final stage is flat.
+            const OUT_FIELD: Record<string, string> = {
+                transliterate: 'transliteration', 'source-as-entry': 'source_as_entry',
+                normalize: 'normalized_entry'};
             const text = out?.runs !== undefined
                 ? runsToText(out.runs)
-                : String(out?.transliteration ?? '');
+                : String(out?.[OUT_FIELD[stage.name] ?? 'transliteration'] ?? '');
             const confidence = Number(out?.confidence ?? 0);
             const hand = item.hand[field];
             const scored = hand !== undefined && hand.trim() !== '';
@@ -763,7 +829,8 @@ export interface EvalData {
     usage: Record<string, {inputTokens: number, outputTokens: number, calls: number}>;
     items: Array<{
         ref_id: number; bounding_group_id: number; crop: string;
-        hand: {transcription: string, expanded?: string, transliteration?: string};
+        hand: {transcription: string, expanded?: string, transliteration?: string,
+           sourceAsEntry?: string, normalized?: string};
         llm: Record<string, {text: string, tagged?: string, confidence: number,
                              sim?: number, lenient?: number, judge?: Judgement}>;
     }>;

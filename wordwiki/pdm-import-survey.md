@@ -236,6 +236,32 @@ understands what they are importing.  On request the system re-derives
 the reading from edited MMO boxes.  Page-at-a-time remains available
 (import every box on a page).
 
+## The five-stage recipe baseline (2026-07-28, pdm/transcribe-eval-5stage.md)
+
+The recipe now runs all five gold rungs (transcribe / expand /
+transliterate / source-as-entry / normalize - the rse/rne structuring
+stages added), scored on the 25-ref sample:
+
+| stage | strict | lenient | judged | n |
+|---|---|---|---|---|
+| transcribe | 79.9 | 81.8 | 77 | 24 |
+| expand | 76.5 | 77.0 | 64 | 7 |
+| transliterate | 58.8 | 59.7 | 66 | 23 |
+| source-as-entry | 50.4 | 50.9 | 54 | 15 |
+| normalize | 53.7 | 54.1 | 51 | 14 |
+
+Reading the rse/rne errors: exact matches on clean inputs (apusqi'gn,
+key), judged-acceptable gloss phrasing variants ("poor little frail
+one" vs "poor little one, puny"), and PIPELINE INHERITANCE - an
+upstream misreading (transliterate 38% on that ref) is unrecoverable
+downstream.  The structuring stages themselves are behaving; the
+compounding chain puts a premium on the upstream stages' confidence
+gating (low-confidence transcriptions poison everything after).
+Also measured this round: the pm-li rules DRAFT injected into the
+transliterate prompt is FLAT (58.8 vs 60.3) - the strict ceiling there
+is the gold's normalization layer, now explicitly owned by these
+stages (transliteration-findings.md Part 4).
+
 ## Suggested next steps (in order)
 
 1. Segmentation pilot: 10 gold pages, geometry+LLM hybrid vs the hand
