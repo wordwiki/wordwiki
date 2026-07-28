@@ -146,10 +146,13 @@ Stage A - 5-page survey (NOW): printed 1 (A, section opener), 40 (E),
 - report with real per-page cost -> quote for the full 172.
 Est. ~30 band calls ~ $1-2 Opus; all cached.
 
-Stage B - hand reference + prompt iteration: hand-transcribe ~2 pages
-(the PDM 25-ref eval pattern), score DIACRITIC fidelity specifically
-(fold-match hides exactly what we care about), iterate the layer-1
-prompt on the survey pages only.
+Stage B - diacritic fidelity + model economics: DONE 2026-07-28, report
+clark/diacritic-eval.md.  Method: Opus/Sonnet differential + ink
+adjudication of every divergence + the 6 MMO hand-transcribed Clark refs
+as human gold.  Outcome: Sonnet slightly BETTER than Opus on this book
+(2.7% vs 4.9% line error rate) at 1/5 cost; production recommendation is
+the DUAL-MODEL gate (agreement auto-accepts, divergences = the review
+queue, ~$80 full book); known-fuzzy class: worn accent shapes over o.
 
 Stage C - dev band: widen to 20-30 pages as the redo-freely set; build
 entry assembly + interpretation properly; land into a `clark` table;

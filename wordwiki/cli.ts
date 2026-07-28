@@ -1384,6 +1384,8 @@ export async function cliMain(args: string[]): Promise<void> {
         //   ./wordwiki.sh transcribe-survey [--book=Clark]
         //                 [--pages=1,40,85,130,170] [--interpret=3]
         //                 [--report=../clark/transcribe-survey.md]
+        //                 [--json=<per-line data, for model comparisons>]
+        //                 [--model=claude-opus-4-8]
         case 'transcribe-survey': {
             const argOf = (name: string, dflt: string) =>
                 args.find(a => a.startsWith(`--${name}=`))?.slice(name.length + 3) ?? dflt;
@@ -1391,10 +1393,12 @@ export async function cliMain(args: string[]): Promise<void> {
             const pages = argOf('pages', '1,40,85,130,170').split(',').map(Number);
             const interpretPerPage = Number(argOf('interpret', '3'));
             const reportPath = argOf('report', '../clark/transcribe-survey.md');
+            const jsonPath = argOf('json', '') || undefined;
+            const model = argOf('model', '') || undefined;
             await security.runSystem(async () => {
                 ww.ensureNewStyleTables();
                 await pageTranscribe.transcribeSurvey({book, pages, interpretPerPage,
-                                                       reportPath});
+                                                       reportPath, jsonPath, model});
             });
             Deno.exit(0);
             break;

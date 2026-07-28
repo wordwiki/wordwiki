@@ -5,7 +5,7 @@ Line scoring compares diacritic-FOLDED LLM lines against the (accent-stripped) t
 
 ## Printed page 1
 
-- lines: 70; aligned 68, fold-exact 64 (94.1%), near (dist<=2) 3, disagreeing 1; model dropped 2 (headers etc.), extra 1
+- lines: 70; aligned 69, fold-exact 66 (95.7%), near (dist<=2) 2, disagreeing 1; model dropped 1 (headers etc.), extra 0
 - entry starts (hanging indent): 28; headword in rand window: 3 (10.7%)
 
 ### Disagreeing lines (textract vs LLM, first 15)
@@ -14,18 +14,18 @@ Line scoring compares diacritic-FOLDED LLM lines against the (accent-stripped) t
 
 ### Headwords NOT in the rand window (25)
 
-`ababatc`, `ababatcwotk`, `abābe`, `ababulooe`, `abadā`, `abadak`, `abadakun`, `abadalālun`, `abadām`, `abadookse`, `abadoolk`, `abadooôkwā`, `abadoowāk`, `abadowoolā`, `abadunum`, `abadunumadimk`, `abajadase`, `abajādoo`, `abajēgādoo`, `abajekwām`, `abajekuloose`, `abajigadoo`, `abajikwāe`, `abajimsunumase`, `abajipkesadoo`
+`ababatc`, `ababatcwotk`, `abābe`, `ababulooe`, `abadā`, `abadak`, `abadakun`, `abadalālun`, `abadām`, `abadookse`, `abadoolk`, `abadooôkwā`, `abadooôwāk`, `abadowoolā`, `abadunum`, `abadunumadimk`, `abajadase`, `abajādoo`, `abajēgādoo`, `abajekwām`, `abajekuloose`, `abajigadoo`, `abajikwāe`, `abajimsunumase`, `abajipkesadoo`
 
 ### Interpreted entries (layer-2 taste, first 3)
 
 ```
-*ă*, very well, yes, I approve of
+*ā*, very well, yes, I approve of
 it, assent to it, it is so; cf.
 English aye; negative *mogwā*,
 see *āoū*.
 =>
 {
-  "headword": "ă",
+  "headword": "ā",
   "glosses": [
     "very well",
     "yes",
@@ -68,7 +68,7 @@ jib.
 ```
 
 ```
-*ababatcwotk*, a bowsprit ; *aba-*
+*ababatcwotk*, a bowsprit; *aba-*
 *bātcwotkā*, characteristic of a
 bowsprit.
 =>
@@ -83,23 +83,18 @@ bowsprit.
       "gloss": "characteristic of a bowsprit"
     }
   ],
-  "confidence": 88
+  "confidence": 90
 }
 ```
 
 ## Printed page 40
 
-- lines: 93; aligned 90, fold-exact 72 (80.0%), near (dist<=2) 16, disagreeing 2; model dropped 3 (headers etc.), extra 0
-- entry starts (hanging indent): 42; headword in rand window: 6 (14.3%)
+- lines: 93; aligned 90, fold-exact 79 (87.8%), near (dist<=2) 11, disagreeing 0; model dropped 3 (headers etc.), extra 0
+- entry starts (hanging indent): 41; headword in rand window: 6 (14.6%)
 
-### Disagreeing lines (textract vs LLM, first 15)
+### Headwords NOT in the rand window (35)
 
-- d4 | `ejetoo6mkwesumasi, I prostrate` | `11 *ejetooómkwesumasē*, I prostrate`
-- d19 | `I` | `trate myself before him.`
-
-### Headwords NOT in the rand window (36)
-
-`eguntook`, `eguskegwedāk`, `egwadesmasē`, `egwadesumaseanul`, `egwedamā`, `egwedī`, `egwejadoo`, `egwejega`, `egwejin`, `ēgwejôdoo`, `egwejboldigul`, `egwitcāwā`, `ejakjedesīn`, `ejakudek`, `ejaktcedāk`, `ejedoomkwase`, `ejeladoo`, `ejelaluk`, `ejeleā`, `ejeleoolimk`, `ejelimk`, `ejelwekugā`, `ejenabek`, `ejenagwit`, `a ejenagwejejit`, `r`, `k`, `g ejetooómkwedak`, `r. ejetooómkwaluk`, `ejetooómkwasē`, `11 ejetooómkwesumasē`, `ejetooómkwesumooktak`, `trate myself before him.`, `ejoonkwedek`, `ejidoonkwodejadoo`, `ejiguledādum`
+`eguntook`, `eguskegwedāk`, `egwadesmasē`, `egwadesumaseanul`, `egwedamā`, `egwedī`, `egwejadoo`, `egwejega`, `egwejin`, `ēgwejôdoo`, `egwejboldigul`, `egwitcāwā`, `ejakjedesīn`, `ejakudek`, `ejaktcedāk`, `ejedoomkwase`, `ejeladoo`, `ejelaluk`, `ejeleā`, `ejeleoolimk`, `ejelimk`, `ejelwekugā`, `ejenabek`, `ejenagwit`, `a ejenagwĕjejit`, `ejeneā`, `ejeneakāet`, `ejetooómkwedak`, `ejetooómkwaluk`, `ejetooómkwasē`, `ejetooómkwesumasē`, `ejetooómkwesumooktak`, `ejoonkweĭek`, `ejidoonkwodejadoo`, `ejiguledādum`
 
 ### Interpreted entries (layer-2 taste, first 3)
 
@@ -144,19 +139,19 @@ under the head for a pillow.
 
 ## Printed page 85
 
-- lines: 72; aligned 71, fold-exact 68 (95.8%), near (dist<=2) 3, disagreeing 0; model dropped 1 (headers etc.), extra 0
-- entry starts (hanging indent): 34; headword in rand window: 12 (35.3%)
+- lines: 72; aligned 71, fold-exact 67 (94.4%), near (dist<=2) 4, disagreeing 0; model dropped 1 (headers etc.), extra 0
+- entry starts (hanging indent): 34; headword in rand window: 11 (32.4%)
 
-### Headwords NOT in the rand window (22)
+### Headwords NOT in the rand window (23)
 
-`labāe`, `labaktestakun`, `labaltināwa`, `labegēsigun`, `labelasabe`, `labesogun`, `Lablalōt`, `laboksoon`, `lagab`, `lagīgunabe`, `lagun`, `lagunā`, `lagunadoo`, `lakpadakunabe`, `lamāk`, `lamakesun`, `lamamkoodook`, `lamatk`, `lamatkĭkt`, `'amibunek`, `'amigwom`, `'amiltcun`
+`labāe`, `labaktestakun`, `labaltināwa`, `labegēsigun`, `labelasabe`, `labesogun`, `Lablalōt`, `laboksoon`, `lagab`, `lagīgunabe`, `lagun`, `lagunā`, `lagunadoo`, `lakpadakunabe`, `lamāk`, `lamakesun`, `lamamkoodook`, `lamatk`, `lamatkīkt`, `'amibunek`, `'amigwom`, `'amiltcun`, `!amitpook`
 
 ### Interpreted entries (layer-2 taste, first 3)
 
 ```
-*labāe*, a keeler, shallow tub ;
-*labatcētc*, (dimunitive), a little
-tub; *ejenagwēt* is the proper
+*labāe*, a keeler, shallow tub
+    *labatcētc*, (dimunitive), a little|
+tub; *ejenagwēt* is the proper|
 word in P. E. I. to-day.
 =>
 {
@@ -167,12 +162,11 @@ word in P. E. I. to-day.
   "derivatives": [
     {
       "form": "labatcētc",
-      "gloss": "a little tub"
+      "gloss": "(diminutive), a little tub"
     }
   ],
   "notes": [
-    "*labatcētc*, (dimunitive)",
-    "*ejenagwēt* is the proper word in P. E. I. to-day."
+    "ejenagwēt is the proper word in P. E. I. to-day."
   ],
   "cross_refs": [
     "ejenagwēt"
@@ -182,7 +176,7 @@ word in P. E. I. to-day.
 ```
 
 ```
-*labaktestakun*, a standard of
+*labaktestakun*, a standard of|
 measurement, ruler, compass-
 es, straight-edge, chalk-line.
 =>
@@ -195,7 +189,7 @@ es, straight-edge, chalk-line.
     "straight-edge",
     "chalk-line"
   ],
-  "confidence": 96
+  "confidence": 90
 }
 ```
 
@@ -213,23 +207,23 @@ es, straight-edge, chalk-line.
 
 ## Printed page 130
 
-- lines: 92; aligned 90, fold-exact 83 (92.2%), near (dist<=2) 5, disagreeing 2; model dropped 2 (headers etc.), extra 0
+- lines: 92; aligned 90, fold-exact 84 (93.3%), near (dist<=2) 4, disagreeing 2; model dropped 2 (headers etc.), extra 0
 - entry starts (hanging indent): 42; headword in rand window: 10 (23.8%)
 
 ### Disagreeing lines (textract vs LLM, first 15)
 
+- d3 | `-130-` | `-130—                    PEG`
 - d3 | `begajeankrendum, I keep it care-` | `*begajeankwodum*, I keep it care-`
-- d20 | `a` | `*pegāŏolabase*, I look down;`
 
 ### Headwords NOT in the rand window (32)
 
-`peboogoolegwok`, `pebooskadoo`, `pedabâktusin`, `pedabāwē`, `pedagāwāl`, `pedăk`, `pedāsooēm`, `pedâtkweak`, `pedeadasik`, `pedogamoosegek`, `pedōgwat`, `pedoksit`, `pedoktām`, `pēdoobegasik`, `pedoobuk`, `pedoodoo`, `pedoogoonōsum`, `Pēduobók`, `peduptoo`, `peduwēgā`, `pegabāwe`, `pegadoo`, `begajeankwodum`, `pegajenoogwadoo`, `pejak`, `pegalkoodunase`, `pegāoolabase`, `pegāŏolabase`, `pegaí`, `pegāwadoo`, `pegāweagase`, `pegepŏogwe`
+`peboogoolegwok`, `pebooskadoo`, `pedabâktusin`, `pedabāwê`, `pedagāwāl`, `pedăk`, `pedāsooēm`, `pedătkweak`, `pedeadasik`, `pedogamoosegek`, `pedōgwat`, `pedoksit`, `pedoktām`, `pēdoobegasik`, `pedoobuk`, `pedoodoo`, `pedoogoonōsum`, `-130—                    PEG`, `Pēduobók`, `peduptoo`, `peduwēgā`, `pegabāwe`, `pegadoo`, `begajeankwodum`, `pegajenoogwadoo`, `pejak`, `pegalkoodunase`, `pegāoolabase`, `pegai`, `pegāwadoo`, `pegāweagase`, `pegepoogwe`
 
 ### Interpreted entries (layer-2 taste, first 3)
 
 ```
 *pebe*, I have a sore (ulcerated)
-  mouth.
+mouth.
 =>
 {
   "headword": "pebe",
@@ -242,46 +236,47 @@ es, straight-edge, chalk-line.
 
 ```
 *pebimkāwā*, alum, remedy for
-  sore mouth.
+sore mouth.
 =>
 {
   "headword": "pebimkāwā",
   "glosses": [
-    "alum, remedy for sore mouth"
+    "alum",
+    "remedy for sore mouth"
   ],
-  "confidence": 96
+  "confidence": 95
 }
 ```
 
 ```
 *peboogoolegwok*, pimpled, cov-
-  ered with an eruption,[2]bird-
-  eye maple.
+ered with an eruption,[2]bird-
+eye maple.
 =>
 {
   "headword": "peboogoolegwok",
   "glosses": [
-    "pimpled",
-    "covered with an eruption",
+    "pimpled, covered with an eruption",
     "bird-eye maple"
   ],
-  "confidence": 88
+  "confidence": 85
 }
 ```
 
 ## Printed page 170
 
-- lines: 91; aligned 89, fold-exact 74 (83.1%), near (dist<=2) 13, disagreeing 2; model dropped 2 (headers etc.), extra 0
-- entry starts (hanging indent): 56; headword in rand window: 14 (25.0%)
+- lines: 91; aligned 90, fold-exact 82 (91.1%), near (dist<=2) 5, disagreeing 3; model dropped 1 (headers etc.), extra 0
+- entry starts (hanging indent): 57; headword in rand window: 17 (29.8%)
 
 ### Disagreeing lines (textract vs LLM, first 15)
 
-- d3 | `wenjoetag, I box, strik` | `*wenjootāgā*, I box, s t r i k e`
+- d3 | `wenjoetag, I box, strik` | `*wenjoŏtāgā*, I box, s t r i k e`
+- d3 | `-170-` | `-170—                    WES`
 - d3 | `weskakeluma, kiss line, embrace.` | `*weskakelumā*, kiss me, embrace.`
 
-### Headwords NOT in the rand window (42)
+### Headwords NOT in the rand window (40)
 
-`wenjooe`, `wenjooēgan`, `wenjooegantcētc`, `wenjooegētakŭn`, `wenjooesegubun`, `wenjooetagun`, `wenjooetcēmā`, `wenjoolkadook`, `wenjootāgā`, `wenjootĕam`, `wenjootĕamwā`, `wenjootĕamwēse`, `wenjootckwetc`, `wenjunkī`, `wenmajāk`, `wenmajetabloomk`, `wenmajīlsomk`, `wenmajīlsoomajul`, `wenmajogun`, `wep`, `wepkoomakunā`, `wepkoomanul`, `wēs`, `wesabegalow`, `wesāk`, `r-|wesame`, `wesameboogwelk`, `s`, `wesamenkusiū`, `e|wesāse`, `wesâwegesum`, `a|wesedoonit`, `n-|wēsegese`, `wesek`, `n-|Wesek`, `p-|wesemoogwā`, `weskakelum`, `weskakelumā`, `weskawâse`, `weskawegwase`, `weskijadoo`, `weskitegadoo`
+`wenjooe`, `wenjooēgan`, `wenjooegantcētc`, `wenjooegētakŭn`, `wenjooesegubun`, `wenjooetagun`, `wenjooetcēmā`, `wenjoolkadook`, `wenjoŏtāgā`, `wenjootĕam`, `wenjootĕamwā`, `wenjootĕamwēse`, `wenjootckwetc`, `wenjunkī`, `wenmajāk`, `wenmajetabloomk`, `wenmajīlsomk`, `wenmajīlsoomajul`, `-170—                    WES`, `wenmajogun`, `wep`, `wepkoomakunā`, `wepkoomanul`, `wēs`, `wesabegalow`, `wesāk`, `wesameboogwelk`, `wesamenkusiū`, `wesawāk`, `wesāse`, `wesâwegesum`, `wesek`, `Wesek`, `wesemoogwā`, `weskakeĺum`, `weskakelumā`, `weskawâse`, `weskawegwase`, `weskijadoo`, `weskitegadoo`
 
 ### Interpreted entries (layer-2 taste, first 3)
 
@@ -298,27 +293,24 @@ es, straight-edge, chalk-line.
 ```
 
 ```
-*wenjooe*, a prefix meaning
-    French; *Wenootc.*
+*wenjooe*, a  prefix  m e a n i n g
+French; *Wenootc.*
 =>
 {
   "headword": "wenjooe",
   "glosses": [
     "a prefix meaning French"
   ],
-  "derivatives": [
-    {
-      "form": "Wenootc.",
-      "gloss": "French"
-    }
+  "cross_refs": [
+    "Wenootc."
   ],
-  "confidence": 80
+  "confidence": 82
 }
 ```
 
 ```
 *wenjooēgan*, (*wenjoogwam*), a
-    frame house, a French house.
+frame house, a French house.
 =>
 {
   "headword": "wenjooēgan",
@@ -329,12 +321,10 @@ es, straight-edge, chalk-line.
     "a frame house",
     "a French house"
   ],
-  "confidence": 95
+  "confidence": 92
 }
 ```
 
 ## Usage (actual API spend this run; cache hits free)
 
-- band-transcribe: 26 calls, 64808 in / 6589 out tokens (~$1.47)
-- clark-entry-interpret: 9 calls, 10195 in / 1148 out tokens (~$0.24)
-- total ~$1.71
+- total ~$0.00

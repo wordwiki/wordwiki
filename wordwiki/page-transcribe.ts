@@ -35,8 +35,12 @@ export const PROMPT_VERSION_BAND_TRANSCRIBE = 1;
 export const PROMPT_VERSION_ENTRY_INTERPRET = 1;
 export const TRANSCRIBE_MODEL = 'claude-opus-4-8';
 
-// Opus 4.x list prices, for the survey's printed cost line only.
-const USD_PER_MTOK_IN = 15, USD_PER_MTOK_OUT = 75;
+// List prices, for the survey's printed cost line only.
+function usdPerMtok(model: string): {inTok: number, outTok: number} {
+    return model.includes('sonnet') ? {inTok: 3, outTok: 15}
+         : model.includes('haiku')  ? {inTok: 1, outTok: 5}
+         :                            {inTok: 15, outTok: 75};   // opus
+}
 
 // ---------------------------------------------------------------------------------
 // --- Page geometry (textract lines already in the db) -----------------------------
@@ -370,8 +374,19 @@ export interface SurveyOptions {
     pages: number[];
     interpretPerPage: number;      // layer-2 taste entries per page
     reportPath: string;
+    jsonPath?: string;             // per-line aligned data (model comparisons)
     model?: string;
     log?: (msg: string) => void;
+}
+
+// Per-line survey data for cross-model comparison (stage B): the aligned
+// LLM line (diacritics intact) for every textract line, per page.
+export interface SurveyJson {
+    book: string; model: string; promptVersion: number;
+    pages: Array<{printed: number,
+                  lines: Array<{column: string, x: number, y: number, w: number, h: number,
+                                textract: string, llm?: string}>,
+                  interpretations: Array<{entryText: string, out: unknown}>}>;
 }
 
 export async function transcribeSurvey(opts: SurveyOptions): Promise<void> {
@@ -394,6 +409,8 @@ export async function transcribeSurvey(opts: SurveyOptions): Promise<void> {
     const tStage = bandTranscribeStage(opts.model);
     const iStage = entryInterpretStage(opts.model);
     const rand = randFoldIndex();
+    const json: SurveyJson = {book: opts.book, model: tStage.model,
+                              promptVersion: PROMPT_VERSION_BAND_TRANSCRIBE, pages: []};
 
     const report: string[] = [];
     report.push(`# ${opts.book} layer-1 transcription survey`);
@@ -413,6 +430,8 @@ export async function transcribeSurvey(opts: SurveyOptions): Promise<void> {
         const lineScores: LineScore[] = [];
         const entries: EntryRow[] = [];
         const columnTexts: {column: string, llmByLine: (string|undefined)[], starts: boolean[]}[] = [];
+        const jsonLines: SurveyJson['pages'][number]['lines'] = [];
+        const jsonInterps: Array<{entryText: string, out: unknown}> = [];
         let dropped = 0, extra = 0;
 
         for(const [column, colLines] of [['left', left], ['right', right]] as const) {
@@ -442,6 +461,10 @@ export async function transcribeSurvey(opts: SurveyOptions): Promise<void> {
             }
             const starts = entryStarts(colLines, geom.width);
             columnTexts.push({column, llmByLine, starts});
+            for(let i = 0; i < colLines.length; i++)
+                jsonLines.push({column, x: colLines[i].x, y: colLines[i].y,
+                                w: colLines[i].w, h: colLines[i].h,
+                                textract: colLines[i].text, llm: llmByLine[i]});
             // Entry rows: start line + its continuation count, headword join.
             for(let i = 0; i < colLines.length; i++) {
                 if(!starts[i]) continue;
@@ -497,6 +520,7 @@ export async function transcribeSurvey(opts: SurveyOptions): Promise<void> {
                         .filter(l => l !== undefined).join('\n');
                     if(fold(entryText) === '' || !entryText.includes(',')) continue;
                     const out: any = await extractTextStage(cfg, iStage, {entryText});
+                    jsonInterps.push({entryText, out});
                     report.push('');
                     report.push('```');
                     report.push(entryText);
@@ -508,6 +532,7 @@ export async function transcribeSurvey(opts: SurveyOptions): Promise<void> {
                 if(done >= opts.interpretPerPage) break;
             }
         }
+        json.pages.push({printed, lines: jsonLines, interpretations: jsonInterps});
     }
 
     // The batch's ACTUAL spend (cache hits never reach onUsage).
@@ -515,8 +540,9 @@ export async function transcribeSurvey(opts: SurveyOptions): Promise<void> {
     report.push('## Usage (actual API spend this run; cache hits free)');
     report.push('');
     let cost = 0;
+    const rates = usdPerMtok(tStage.model);
     for(const [stage, u] of usage) {
-        const c = u.inputTokens * USD_PER_MTOK_IN / 1e6 + u.outputTokens * USD_PER_MTOK_OUT / 1e6;
+        const c = u.inputTokens * rates.inTok / 1e6 + u.outputTokens * rates.outTok / 1e6;
         cost += c;
         report.push(`- ${stage}: ${u.calls} calls, ${u.inputTokens} in / ${u.outputTokens} out ` +
                     `tokens (~$${c.toFixed(2)})`);
@@ -525,5 +551,9 @@ export async function transcribeSurvey(opts: SurveyOptions): Promise<void> {
 
     await Deno.mkdir(posix.dirname(opts.reportPath), {recursive: true});
     await Deno.writeTextFile(opts.reportPath, report.join('\n') + '\n');
+    if(opts.jsonPath) {
+        await Deno.mkdir(posix.dirname(opts.jsonPath), {recursive: true});
+        await Deno.writeTextFile(opts.jsonPath, JSON.stringify(json, undefined, 1));
+    }
     log(`survey report written to ${opts.reportPath} (~$${cost.toFixed(2)} spent this run)`);
 }

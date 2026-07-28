@@ -1,0 +1,3998 @@
+{
+ "book": "Clark",
+ "model": "claude-opus-4-8",
+ "promptVersion": 1,
+ "pages": [
+  {
+   "printed": 1,
+   "lines": [
+    {
+     "column": "left",
+     "x": 998,
+     "y": 832,
+     "w": 162,
+     "h": 120,
+     "textract": "A",
+     "llm": "A"
+    },
+    {
+     "column": "left",
+     "x": 523,
+     "y": 1069,
+     "w": 52,
+     "h": 49,
+     "textract": "A",
+     "llm": "A"
+    },
+    {
+     "column": "left",
+     "x": 28,
+     "y": 1183,
+     "w": 1016,
+     "h": 71,
+     "textract": "a, very well, yes, I approve of",
+     "llm": "*ā*, very well, yes, I approve of"
+    },
+    {
+     "column": "left",
+     "x": 96,
+     "y": 1250,
+     "w": 940,
+     "h": 66,
+     "textract": "it, assent to it, it is so; cf.",
+     "llm": "it, assent to it, it is so; cf."
+    },
+    {
+     "column": "left",
+     "x": 98,
+     "y": 1318,
+     "w": 939,
+     "h": 71,
+     "textract": "English aye; negative mogwa,",
+     "llm": "English aye; negative *mogwā*,"
+    },
+    {
+     "column": "left",
+     "x": 97,
+     "y": 1390,
+     "w": 248,
+     "h": 50,
+     "textract": "see .",
+     "llm": "see *āoū*."
+    },
+    {
+     "column": "left",
+     "x": 29,
+     "y": 1451,
+     "w": 1014,
+     "h": 73,
+     "textract": "ababatc, a jib; lit, a rope-sail;",
+     "llm": "*ababatc*, a jib; *lit*, a rope-sail;"
+    },
+    {
+     "column": "left",
+     "x": 97,
+     "y": 1521,
+     "w": 944,
+     "h": 71,
+     "textract": "ababatcwä, adj. relating to a",
+     "llm": "*ababatcwā*, adj. relating to a"
+    },
+    {
+     "column": "left",
+     "x": 92,
+     "y": 1589,
+     "w": 108,
+     "h": 67,
+     "textract": "jib.",
+     "llm": "jib."
+    },
+    {
+     "column": "left",
+     "x": 30,
+     "y": 1653,
+     "w": 1016,
+     "h": 72,
+     "textract": "ababatcwotk, a bowsprit; aba-",
+     "llm": "*ababatcwotk*, a bowsprit; *aba-*"
+    },
+    {
+     "column": "left",
+     "x": 94,
+     "y": 1723,
+     "w": 949,
+     "h": 65,
+     "textract": "batcwotkã, characteristic of a",
+     "llm": "*bātcwotkā*, characteristic of a"
+    },
+    {
+     "column": "left",
+     "x": 97,
+     "y": 1792,
+     "w": 288,
+     "h": 69,
+     "textract": "bowsprit.",
+     "llm": "bowsprit."
+    },
+    {
+     "column": "left",
+     "x": 28,
+     "y": 1858,
+     "w": 1012,
+     "h": 72,
+     "textract": "ababe, a rope, cord, string, (An.",
+     "llm": "*abābe*, a rope, cord, string, (An."
+    },
+    {
+     "column": "left",
+     "x": 98,
+     "y": 1926,
+     "w": 948,
+     "h": 71,
+     "textract": "Gender); ababeak, it is made",
+     "llm": "Gender); *abābeak*, it is made"
+    },
+    {
+     "column": "left",
+     "x": 96,
+     "y": 1994,
+     "w": 944,
+     "h": 72,
+     "textract": "of rope; ababawe, it is a rope.",
+     "llm": "of rope; *ababāwe*, it is a rope."
+    },
+    {
+     "column": "left",
+     "x": 27,
+     "y": 2071,
+     "w": 1015,
+     "h": 66,
+     "textract": "ababulooe, I return from a hunt,",
+     "llm": "*ababulooe*, I return from a hunt,"
+    },
+    {
+     "column": "left",
+     "x": 96,
+     "y": 2142,
+     "w": 441,
+     "h": 53,
+     "textract": "a moose-hunt.",
+     "llm": "a moose-hunt."
+    },
+    {
+     "column": "left",
+     "x": 26,
+     "y": 2215,
+     "w": 1023,
+     "h": 71,
+     "textract": "abada, I put aside a portion of",
+     "llm": "*abadā*, I put aside a portion of"
+    },
+    {
+     "column": "left",
+     "x": 97,
+     "y": 2283,
+     "w": 943,
+     "h": 57,
+     "textract": "food at mealtime for some-",
+     "llm": "food at mealtime for some-"
+    },
+    {
+     "column": "left",
+     "x": 97,
+     "y": 2371,
+     "w": 131,
+     "h": 37,
+     "textract": "one.",
+     "llm": "one."
+    },
+    {
+     "column": "left",
+     "x": 28,
+     "y": 2425,
+     "w": 1020,
+     "h": 74,
+     "textract": "abadak, a portion of food put",
+     "llm": "*abadak*, a portion of food put"
+    },
+    {
+     "column": "left",
+     "x": 96,
+     "y": 2495,
+     "w": 951,
+     "h": 70,
+     "textract": "aside for someone [hence Bad-",
+     "llm": "aside for someone [hence Bad-"
+    },
+    {
+     "column": "left",
+     "x": 98,
+     "y": 2565,
+     "w": 388,
+     "h": 65,
+     "textract": "deck, C. B.]",
+     "llm": "deck, C. B.]"
+    },
+    {
+     "column": "left",
+     "x": 26,
+     "y": 2638,
+     "w": 1019,
+     "h": 73,
+     "textract": "abadakun, a portion of food re-",
+     "llm": "*abadakun*, a portion of food re-"
+    },
+    {
+     "column": "left",
+     "x": 99,
+     "y": 2711,
+     "w": 613,
+     "h": 56,
+     "textract": "served after a meal.",
+     "llm": "served after a meal."
+    },
+    {
+     "column": "left",
+     "x": 28,
+     "y": 2783,
+     "w": 1017,
+     "h": 70,
+     "textract": "abadalalun, I come back from",
+     "llm": "*abadalālun*, I come back from"
+    },
+    {
+     "column": "left",
+     "x": 98,
+     "y": 2854,
+     "w": 676,
+     "h": 73,
+     "textract": "eating; (ab-etladal.)",
+     "llm": "eating; (*ab—etladāl.*)"
+    },
+    {
+     "column": "left",
+     "x": 28,
+     "y": 2929,
+     "w": 1016,
+     "h": 68,
+     "textract": "abadam, I swim back again;",
+     "llm": "*abadām*, I swim back again;"
+    },
+    {
+     "column": "left",
+     "x": 1132,
+     "y": 2947,
+     "w": 182,
+     "h": 53,
+     "textract": "abode"
+    },
+    {
+     "column": "left",
+     "x": 27,
+     "y": 3000,
+     "w": 1015,
+     "h": 69,
+     "textract": "abadookse, I recall the past,",
+     "llm": "*abadookse*, I recall t h e past,"
+    },
+    {
+     "column": "left",
+     "x": 96,
+     "y": 3072,
+     "w": 574,
+     "h": 67,
+     "textract": "dream of the past.",
+     "llm": "dream of the past."
+    },
+    {
+     "column": "left",
+     "x": 25,
+     "y": 3143,
+     "w": 1023,
+     "h": 74,
+     "textract": "abadoolk, I bring him back; aba-",
+     "llm": "*abadoolk*, I bring him back; *aba-*"
+    },
+    {
+     "column": "left",
+     "x": 94,
+     "y": 3212,
+     "w": 818,
+     "h": 71,
+     "textract": "doolool, I bring you back.",
+     "llm": "*doolool*, I bring you back."
+    },
+    {
+     "column": "left",
+     "x": 27,
+     "y": 3284,
+     "w": 1024,
+     "h": 71,
+     "textract": "abadoookwa, I float ashore; aba-",
+     "llm": "*abadooôkwā*, I float ashore; *aba-*"
+    },
+    {
+     "column": "left",
+     "x": 91,
+     "y": 3356,
+     "w": 952,
+     "h": 74,
+     "textract": "dooogwodigul, they (inan.)",
+     "llm": "*dooógwodigul*, t h e y  (inan.)"
+    },
+    {
+     "column": "left",
+     "x": 105,
+     "y": 3432,
+     "w": 383,
+     "h": 54,
+     "textract": "float ashore.",
+     "llm": "float ashore."
+    },
+    {
+     "column": "right",
+     "x": 1487,
+     "y": 1067,
+     "w": 148,
+     "h": 52,
+     "textract": "ABA",
+     "llm": "ABA"
+    },
+    {
+     "column": "right",
+     "x": 1058,
+     "y": 1180,
+     "w": 1019,
+     "h": 71,
+     "textract": "abadooowak, balmy weather",
+     "llm": "*abadooôwāk*,  b a l m y   weather"
+    },
+    {
+     "column": "right",
+     "x": 1129,
+     "y": 1250,
+     "w": 942,
+     "h": 67,
+     "textract": "comes borne on the breeze,",
+     "llm": "comes borne on the breeze,"
+    },
+    {
+     "column": "right",
+     "x": 1129,
+     "y": 1317,
+     "w": 941,
+     "h": 71,
+     "textract": "(floating along); kedoobadoo6-",
+     "llm": "(floating along); *kedoobadooô-*"
+    },
+    {
+     "column": "right",
+     "x": 1130,
+     "y": 1387,
+     "w": 942,
+     "h": 63,
+     "textract": "wäk, we shall have warm",
+     "llm": "*wāk*,  we  shall  h a v e  warm"
+    },
+    {
+     "column": "right",
+     "x": 1129,
+     "y": 1454,
+     "w": 485,
+     "h": 66,
+     "textract": "balmy weather.",
+     "llm": "balmy weather."
+    },
+    {
+     "column": "right",
+     "x": 1059,
+     "y": 1519,
+     "w": 1015,
+     "h": 75,
+     "textract": "abadowoolà, I carry something",
+     "llm": "*abadowoolā*, I carry something"
+    },
+    {
+     "column": "right",
+     "x": 1131,
+     "y": 1589,
+     "w": 943,
+     "h": 69,
+     "textract": "back with me, on my shoulder.",
+     "llm": "back with me, on my shoulder."
+    },
+    {
+     "column": "right",
+     "x": 1059,
+     "y": 1654,
+     "w": 1015,
+     "h": 68,
+     "textract": "abadunum, I restore a borrowed",
+     "llm": "*abadunum*, I restore a borrowed"
+    },
+    {
+     "column": "right",
+     "x": 1131,
+     "y": 1725,
+     "w": 642,
+     "h": 55,
+     "textract": "article to the owner.",
+     "llm": "article to the owner."
+    },
+    {
+     "column": "right",
+     "x": 1058,
+     "y": 1790,
+     "w": 1017,
+     "h": 71,
+     "textract": "abadunumadimk, restoration,",
+     "llm": "*abadunumadimk*,  r e s t o ration,"
+    },
+    {
+     "column": "right",
+     "x": 1135,
+     "y": 1860,
+     "w": 718,
+     "h": 68,
+     "textract": "reparation, repayment.",
+     "llm": "reparation, repayment."
+    },
+    {
+     "column": "right",
+     "x": 1062,
+     "y": 1925,
+     "w": 1017,
+     "h": 69,
+     "textract": "abajadase, 1 am restored to con-",
+     "llm": "*abajadase*, I am restored to con-"
+    },
+    {
+     "column": "right",
+     "x": 1133,
+     "y": 1996,
+     "w": 948,
+     "h": 70,
+     "textract": "sciousness, I bring back some-",
+     "llm": "sciousness, I bring back some-"
+    },
+    {
+     "column": "right",
+     "x": 1133,
+     "y": 2062,
+     "w": 947,
+     "h": 70,
+     "textract": "thing of my own abajip-",
+     "llm": "thing of  m y  o w n ; *abajip-*"
+    },
+    {
+     "column": "right",
+     "x": 1132,
+     "y": 2129,
+     "w": 941,
+     "h": 71,
+     "textract": "kesedase, I am brought back.",
+     "llm": "*kesēdase*, I am brought back."
+    },
+    {
+     "column": "right",
+     "x": 1069,
+     "y": 2198,
+     "w": 1012,
+     "h": 67,
+     "textract": "abajadoo, I return it, restore it;",
+     "llm": "*abajādoo*, I return it, restore it;"
+    },
+    {
+     "column": "right",
+     "x": 1135,
+     "y": 2264,
+     "w": 940,
+     "h": 75,
+     "textract": "abajeak. it returns; abajigeak,",
+     "llm": "*abajeak*. it returns; *abajigeak*,"
+    },
+    {
+     "column": "right",
+     "x": 1134,
+     "y": 2335,
+     "w": 486,
+     "h": 69,
+     "textract": "it springs back.",
+     "llm": "it springs back."
+    },
+    {
+     "column": "right",
+     "x": 1065,
+     "y": 2401,
+     "w": 1018,
+     "h": 70,
+     "textract": "abajegadoo, I put it back, re-",
+     "llm": "*abajēgādoo*, I put it back, re-"
+    },
+    {
+     "column": "right",
+     "x": 1136,
+     "y": 2471,
+     "w": 516,
+     "h": 67,
+     "textract": "turn to its place.",
+     "llm": "turn to its place."
+    },
+    {
+     "column": "right",
+     "x": 1066,
+     "y": 2537,
+     "w": 806,
+     "h": 68,
+     "textract": "abajekwam, I swim back.",
+     "llm": "*abajekwām*, I swim back."
+    },
+    {
+     "column": "right",
+     "x": 1066,
+     "y": 2605,
+     "w": 666,
+     "h": 70,
+     "textract": "abajekuloose, I reply.",
+     "llm": "*abajekuloose*, I reply."
+    },
+    {
+     "column": "right",
+     "x": 1066,
+     "y": 2673,
+     "w": 1013,
+     "h": 69,
+     "textract": "abajigadoo, I cause it to rebound,",
+     "llm": "*abajigadoo*, I cause it to rebound,"
+    },
+    {
+     "column": "right",
+     "x": 1134,
+     "y": 2740,
+     "w": 739,
+     "h": 70,
+     "textract": "spring back like a bow.",
+     "llm": "spring back like a bow."
+    },
+    {
+     "column": "right",
+     "x": 1063,
+     "y": 2809,
+     "w": 1023,
+     "h": 68,
+     "textract": "abajikwae, I remove back, re-",
+     "llm": "*abajikwāe*, I remove back, re-"
+    },
+    {
+     "column": "right",
+     "x": 1132,
+     "y": 2876,
+     "w": 954,
+     "h": 73,
+     "textract": "turn to a former place of",
+     "llm": "turn to a former place of"
+    },
+    {
+     "column": "right",
+     "x": 1065,
+     "y": 3013,
+     "w": 1018,
+     "h": 68,
+     "textract": "abajimsunumase, I receive my",
+     "llm": "*abajimsunumase*, I receive my"
+    },
+    {
+     "column": "right",
+     "x": 1136,
+     "y": 3080,
+     "w": 944,
+     "h": 62,
+     "textract": "own back; I am received back.",
+     "llm": "own back; I am received back."
+    },
+    {
+     "column": "right",
+     "x": 1069,
+     "y": 3146,
+     "w": 963,
+     "h": 72,
+     "textract": "abajipkesadoo, I bring it back.",
+     "llm": "*abajipkesadoo*, I bring it back."
+    },
+    {
+     "column": "right",
+     "x": 1066,
+     "y": 3216,
+     "w": 1013,
+     "h": 72,
+     "textract": "abajipkesin, I return again,",
+     "llm": "*abajipkesin*, I return again,"
+    },
+    {
+     "column": "right",
+     "x": 1156,
+     "y": 3288,
+     "w": 376,
+     "h": 53,
+     "textract": "come home.",
+     "llm": "come home."
+    },
+    {
+     "column": "right",
+     "x": 1064,
+     "y": 3351,
+     "w": 1022,
+     "h": 73,
+     "textract": "abajipkwodelak, I buy him back;",
+     "llm": "*abajipkwodelak*, I buy him back;"
+    },
+    {
+     "column": "right",
+     "x": 1139,
+     "y": 3421,
+     "w": 951,
+     "h": 72,
+     "textract": "redeem him; (abaje-pegwo-",
+     "llm": "redeem  him;  (*abaje—pegwo-*"
+    }
+   ],
+   "interpretations": [
+    {
+     "entryText": "*ā*, very well, yes, I approve of\nit, assent to it, it is so; cf.\nEnglish aye; negative *mogwā*,\nsee *āoū*.",
+     "out": {
+      "headword": "ā",
+      "glosses": [
+       "very well",
+       "yes",
+       "I approve of it",
+       "assent to it",
+       "it is so"
+      ],
+      "cross_refs": [
+       "cf. English aye",
+       "see āoū"
+      ],
+      "notes": [
+       "negative mogwā"
+      ],
+      "confidence": 95
+     }
+    },
+    {
+     "entryText": "*ababatc*, a jib; *lit*, a rope-sail;\n*ababatcwā*, adj. relating to a\njib.",
+     "out": {
+      "headword": "ababatc",
+      "glosses": [
+       "a jib"
+      ],
+      "notes": [
+       "lit, a rope-sail"
+      ],
+      "derivatives": [
+       {
+        "form": "ababatcwā",
+        "gloss": "adj. relating to a jib"
+       }
+      ],
+      "confidence": 95
+     }
+    },
+    {
+     "entryText": "*ababatcwotk*, a bowsprit; *aba-*\n*bātcwotkā*, characteristic of a\nbowsprit.",
+     "out": {
+      "headword": "ababatcwotk",
+      "glosses": [
+       "a bowsprit"
+      ],
+      "derivatives": [
+       {
+        "form": "ababātcwotkā",
+        "gloss": "characteristic of a bowsprit"
+       }
+      ],
+      "confidence": 90
+     }
+    }
+   ]
+  },
+  {
+   "printed": 40,
+   "lines": [
+    {
+     "column": "left",
+     "x": 796,
+     "y": 437,
+     "w": 133,
+     "h": 64,
+     "textract": "EJA",
+     "llm": "EJA"
+    },
+    {
+     "column": "left",
+     "x": 392,
+     "y": 584,
+     "w": 905,
+     "h": 71,
+     "textract": "eguntook, ahead, in front of.",
+     "llm": "*eguntook*, ahead, in front of."
+    },
+    {
+     "column": "left",
+     "x": 391,
+     "y": 653,
+     "w": 1012,
+     "h": 71,
+     "textract": "eguskegwedäk, I slap him on",
+     "llm": "*eguskegwedāk*, I slap him on"
+    },
+    {
+     "column": "left",
+     "x": 457,
+     "y": 723,
+     "w": 264,
+     "h": 52,
+     "textract": "the face.",
+     "llm": "the face."
+    },
+    {
+     "column": "left",
+     "x": 386,
+     "y": 787,
+     "w": 1019,
+     "h": 70,
+     "textract": "egwadesmase, I place something",
+     "llm": "*egwadesmasē*, I place something"
+    },
+    {
+     "column": "left",
+     "x": 458,
+     "y": 857,
+     "w": 888,
+     "h": 69,
+     "textract": "under the head for a pillow.",
+     "llm": "under the head for a pillow."
+    },
+    {
+     "column": "left",
+     "x": 387,
+     "y": 922,
+     "w": 1017,
+     "h": 71,
+     "textract": "egwadesumaseanul, I pillow",
+     "llm": "*egwadesumaseanul*, I pillow"
+    },
+    {
+     "column": "left",
+     "x": 454,
+     "y": 992,
+     "w": 611,
+     "h": 68,
+     "textract": "my head upon you.",
+     "llm": "my head upon you."
+    },
+    {
+     "column": "left",
+     "x": 384,
+     "y": 1057,
+     "w": 1021,
+     "h": 70,
+     "textract": "egwedak, it hangs to it, sticks to",
+     "llm": "*egwedak*, it hangs to it, sticks to"
+    },
+    {
+     "column": "left",
+     "x": 456,
+     "y": 1127,
+     "w": 672,
+     "h": 69,
+     "textract": "it, is caught, hooked.",
+     "llm": "it, is caught, hooked."
+    },
+    {
+     "column": "left",
+     "x": 388,
+     "y": 1192,
+     "w": 1015,
+     "h": 71,
+     "textract": "egwedama, I go afishing with",
+     "llm": "*egwedamā*, I go afishing with"
+    },
+    {
+     "column": "left",
+     "x": 455,
+     "y": 1264,
+     "w": 199,
+     "h": 53,
+     "textract": "hooks.",
+     "llm": "hooks."
+    },
+    {
+     "column": "left",
+     "x": 384,
+     "y": 1327,
+     "w": 1020,
+     "h": 72,
+     "textract": "egwedi, I clutch at things, throw",
+     "llm": "*egwedī*, I clutch at things, throw"
+    },
+    {
+     "column": "left",
+     "x": 455,
+     "y": 1397,
+     "w": 516,
+     "h": 68,
+     "textract": "my arms wildly.",
+     "llm": "my arms wildly."
+    },
+    {
+     "column": "left",
+     "x": 383,
+     "y": 1464,
+     "w": 1020,
+     "h": 71,
+     "textract": "egwedunum, I place it on the",
+     "llm": "*egwēdunum*, I place it on the"
+    },
+    {
+     "column": "left",
+     "x": 455,
+     "y": 1531,
+     "w": 847,
+     "h": 68,
+     "textract": "water; hence kweedun,",
+     "llm": "water; hence *kweedun*,"
+    },
+    {
+     "column": "left",
+     "x": 456,
+     "y": 1617,
+     "w": 192,
+     "h": 37,
+     "textract": "canoe.",
+     "llm": "canoe."
+    },
+    {
+     "column": "left",
+     "x": 384,
+     "y": 1667,
+     "w": 1012,
+     "h": 69,
+     "textract": "egwejadoo, I put it in the water,",
+     "llm": "*egwejadoo*, I put it in the water,"
+    },
+    {
+     "column": "left",
+     "x": 452,
+     "y": 1735,
+     "w": 942,
+     "h": 67,
+     "textract": "dip it in the water; egwijaluk,",
+     "llm": "dip it in the water; *egwijaluk*,"
+    },
+    {
+     "column": "left",
+     "x": 453,
+     "y": 1803,
+     "w": 949,
+     "h": 69,
+     "textract": "I dip him into the water; egwe-",
+     "llm": "I dip him into the water; *egwe-*"
+    },
+    {
+     "column": "left",
+     "x": 439,
+     "y": 1870,
+     "w": 220,
+     "h": 71,
+     "textract": "jadasi.",
+     "llm": "*jadasi.*"
+    },
+    {
+     "column": "left",
+     "x": 383,
+     "y": 1938,
+     "w": 1019,
+     "h": 69,
+     "textract": "egwejega, I throw something",
+     "llm": "*egwejega*, I throw something"
+    },
+    {
+     "column": "left",
+     "x": 457,
+     "y": 2009,
+     "w": 466,
+     "h": 54,
+     "textract": "into the water.",
+     "llm": "into the water."
+    },
+    {
+     "column": "left",
+     "x": 386,
+     "y": 2075,
+     "w": 1012,
+     "h": 71,
+     "textract": "egwejin, I lie still on the water.",
+     "llm": "*egwejin*, I lie still on the water."
+    },
+    {
+     "column": "left",
+     "x": 385,
+     "y": 2141,
+     "w": 1018,
+     "h": 71,
+     "textract": "egwejódoo, I put it into a kettle",
+     "llm": "*ēgwejôdoo*, I put it into a kettle"
+    },
+    {
+     "column": "left",
+     "x": 454,
+     "y": 2211,
+     "w": 875,
+     "h": 65,
+     "textract": "of water; egwijoluk, An. G.",
+     "llm": "of water; *egwïjôluk*, An. G."
+    },
+    {
+     "column": "left",
+     "x": 383,
+     "y": 2276,
+     "w": 1019,
+     "h": 72,
+     "textract": "egwejboldigul, they lie still",
+     "llm": "*egwejboldigul*, they lie s t i l l"
+    },
+    {
+     "column": "left",
+     "x": 462,
+     "y": 2346,
+     "w": 461,
+     "h": 67,
+     "textract": "(under) water.",
+     "llm": "(under) water."
+    },
+    {
+     "column": "left",
+     "x": 384,
+     "y": 2415,
+     "w": 916,
+     "h": 67,
+     "textract": "egwitcawa, l, chocolate root.",
+     "llm": "*egwitcāwā*, *l*, chocolate root."
+    },
+    {
+     "column": "left",
+     "x": 381,
+     "y": 2479,
+     "w": 922,
+     "h": 73,
+     "textract": "ejakjedesin, or ebakjedesin,",
+     "llm": "*ejakjedesīn*, or *ebakjēdesin*,"
+    },
+    {
+     "column": "left",
+     "x": 455,
+     "y": 2551,
+     "w": 944,
+     "h": 69,
+     "textract": "fall upon the seat; haunches.",
+     "llm": "fall upon the seat; haunches."
+    },
+    {
+     "column": "left",
+     "x": 382,
+     "y": 2617,
+     "w": 1023,
+     "h": 70,
+     "textract": "ejakudek, I butt, hit against",
+     "llm": "*ejakudek*, I butt, hit against"
+    },
+    {
+     "column": "left",
+     "x": 451,
+     "y": 2687,
+     "w": 140,
+     "h": 54,
+     "textract": "him.",
+     "llm": "him."
+    },
+    {
+     "column": "left",
+     "x": 380,
+     "y": 2754,
+     "w": 1022,
+     "h": 71,
+     "textract": "ejakunjedestakun, a stumbling-",
+     "llm": "*ejakunjedestakun*, a stumbling-"
+    },
+    {
+     "column": "left",
+     "x": 452,
+     "y": 2831,
+     "w": 179,
+     "h": 46,
+     "textract": "stone.",
+     "llm": "stone."
+    },
+    {
+     "column": "left",
+     "x": 381,
+     "y": 2887,
+     "w": 1019,
+     "h": 72,
+     "textract": "ejukunjedeskum, I kick him",
+     "llm": "*ejakunjedeskum*, I kick him"
+    },
+    {
+     "column": "left",
+     "x": 449,
+     "y": 2959,
+     "w": 264,
+     "h": 55,
+     "textract": "forward.",
+     "llm": "forward."
+    },
+    {
+     "column": "left",
+     "x": 383,
+     "y": 3026,
+     "w": 1017,
+     "h": 71,
+     "textract": "ejakunjedestei, I stumble over",
+     "llm": "*ejakunjedesteī*, I stumble over"
+    },
+    {
+     "column": "left",
+     "x": 452,
+     "y": 3096,
+     "w": 349,
+     "h": 66,
+     "textract": "something.",
+     "llm": "something."
+    },
+    {
+     "column": "left",
+     "x": 380,
+     "y": 3161,
+     "w": 1020,
+     "h": 72,
+     "textract": "ejaktcedak, I knock him SO that",
+     "llm": "*ejaktcedāk*, I knock him so that"
+    },
+    {
+     "column": "left",
+     "x": 454,
+     "y": 3230,
+     "w": 949,
+     "h": 72,
+     "textract": "he falls upon his buttocks",
+     "llm": "he falls upon his buttocks"
+    },
+    {
+     "column": "left",
+     "x": 455,
+     "y": 3301,
+     "w": 197,
+     "h": 67,
+     "textract": "(seat).",
+     "llm": "(seat)."
+    },
+    {
+     "column": "left",
+     "x": 380,
+     "y": 3366,
+     "w": 924,
+     "h": 70,
+     "textract": "ejedoomkwase, I stoop down.",
+     "llm": "*ejedoomkwase*, I stoop down."
+    },
+    {
+     "column": "left",
+     "x": 383,
+     "y": 3433,
+     "w": 1018,
+     "h": 75,
+     "textract": "ejeladoo, I am incapable, unable",
+     "llm": "*ejeladoo*, I am incapable, unable"
+    },
+    {
+     "column": "left",
+     "x": 450,
+     "y": 3502,
+     "w": 950,
+     "h": 71,
+     "textract": "to do it; ejeledasik, it cannot",
+     "llm": "to do it; *ejeledasik*, it cannot"
+    },
+    {
+     "column": "right",
+     "x": 1847,
+     "y": 437,
+     "w": 112,
+     "h": 64,
+     "textract": "EJI",
+     "llm": "40 —                    EJI"
+    },
+    {
+     "column": "right",
+     "x": 1268,
+     "y": 447,
+     "w": 251,
+     "h": 51,
+     "textract": "/ 40 /"
+    },
+    {
+     "column": "right",
+     "x": 1488,
+     "y": 585,
+     "w": 264,
+     "h": 55,
+     "textract": "be done.",
+     "llm": "be done."
+    },
+    {
+     "column": "right",
+     "x": 1412,
+     "y": 653,
+     "w": 1015,
+     "h": 69,
+     "textract": "ejelaluk, I cannot help him,",
+     "llm": "*ejelaluk*, I cannot help him,"
+    },
+    {
+     "column": "right",
+     "x": 1487,
+     "y": 722,
+     "w": 751,
+     "h": 68,
+     "textract": "am unable to help him.",
+     "llm": "am unable to help him."
+    },
+    {
+     "column": "right",
+     "x": 1419,
+     "y": 787,
+     "w": 1015,
+     "h": 72,
+     "textract": "ejelea, I am very weak, incap-",
+     "llm": "*ejeleā*, I am very weak, incap-"
+    },
+    {
+     "column": "right",
+     "x": 1484,
+     "y": 858,
+     "w": 156,
+     "h": 51,
+     "textract": "able.",
+     "llm": "able."
+    },
+    {
+     "column": "right",
+     "x": 1416,
+     "y": 922,
+     "w": 1015,
+     "h": 69,
+     "textract": "ejeleoolimk, I cannot speak well",
+     "llm": "*ejeleoolimk*, I cannot speak well"
+    },
+    {
+     "column": "right",
+     "x": 1487,
+     "y": 991,
+     "w": 691,
+     "h": 68,
+     "textract": "of him. (2) suspicion.",
+     "llm": "of him. (2) suspicion."
+    },
+    {
+     "column": "right",
+     "x": 1419,
+     "y": 1058,
+     "w": 1006,
+     "h": 70,
+     "textract": "ejelimk, I cannot speak to him,",
+     "llm": "*ejelimk*, I cannot speak to him,"
+    },
+    {
+     "column": "right",
+     "x": 1513,
+     "y": 1126,
+     "w": 238,
+     "h": 63,
+     "textract": "ellhim;",
+     "llm": "tell him;"
+    },
+    {
+     "column": "right",
+     "x": 1417,
+     "y": 1192,
+     "w": 875,
+     "h": 69,
+     "textract": "ejelwekug, I cannot write.",
+     "llm": "*ejelwekugā*, I cannot write."
+    },
+    {
+     "column": "right",
+     "x": 1419,
+     "y": 1260,
+     "w": 1014,
+     "h": 70,
+     "textract": "ejenabek, it is made low, (a bas-",
+     "llm": "*ejenabek*, it is made low, (a bas-"
+    },
+    {
+     "column": "right",
+     "x": 1485,
+     "y": 1329,
+     "w": 626,
+     "h": 68,
+     "textract": "ket, boat or vessel).",
+     "llm": "ket, boat or vessel)."
+    },
+    {
+     "column": "right",
+     "x": 1416,
+     "y": 1394,
+     "w": 1015,
+     "h": 72,
+     "textract": "ejenagwit, ijik, it is shallow, a",
+     "llm": "*ejenagwit*, *ijik*, it is shallow, a"
+    },
+    {
+     "column": "right",
+     "x": 1484,
+     "y": 1466,
+     "w": 625,
+     "h": 62,
+     "textract": "keeler, shallow tub.",
+     "llm": "keeler, shallow tub."
+    },
+    {
+     "column": "right",
+     "x": 1415,
+     "y": 1531,
+     "w": 1018,
+     "h": 71,
+     "textract": "ejenagwejejit, a small keeler or",
+     "llm": "a *ejenagwĕjejit*, a small keeler or"
+    },
+    {
+     "column": "right",
+     "x": 1367,
+     "y": 1548,
+     "w": 32,
+     "h": 39,
+     "textract": "a"
+    },
+    {
+     "column": "right",
+     "x": 1487,
+     "y": 1601,
+     "w": 442,
+     "h": 54,
+     "textract": "wooden basin.",
+     "llm": "wooden basin."
+    },
+    {
+     "column": "right",
+     "x": 1417,
+     "y": 1666,
+     "w": 826,
+     "h": 68,
+     "textract": "ejenea, it is low in the air.",
+     "llm": "*ejeneā*, it is low in the air."
+    },
+    {
+     "column": "right",
+     "x": 1415,
+     "y": 1734,
+     "w": 1018,
+     "h": 71,
+     "textract": "ejeneakaet, he (an. gender) flies",
+     "llm": "*ejeneakāet*, he (an. gender) flies"
+    },
+    {
+     "column": "right",
+     "x": 1483,
+     "y": 1801,
+     "w": 951,
+     "h": 71,
+     "textract": "low; ajejeneakaet, he flies",
+     "llm": "low; *ajējenēakaet*, he flies"
+    },
+    {
+     "column": "right",
+     "x": 1482,
+     "y": 1873,
+     "w": 178,
+     "h": 52,
+     "textract": "lower",
+     "llm": "lower."
+    },
+    {
+     "column": "right",
+     "x": 1416,
+     "y": 1935,
+     "w": 1015,
+     "h": 72,
+     "textract": "ejetooomkwedak, T bow down to",
+     "llm": "*ejetooómkwedak*, I bow down to"
+    },
+    {
+     "column": "right",
+     "x": 1484,
+     "y": 2005,
+     "w": 672,
+     "h": 68,
+     "textract": "him. See ejinkwedak",
+     "llm": "him. See *ejinkwedak*"
+    },
+    {
+     "column": "right",
+     "x": 1415,
+     "y": 2073,
+     "w": 1014,
+     "h": 72,
+     "textract": "ejetooomkwaluk, I compel him",
+     "llm": "*ejetooómkwaluk*, I compel him"
+    },
+    {
+     "column": "right",
+     "x": 1484,
+     "y": 2143,
+     "w": 421,
+     "h": 53,
+     "textract": "to bow down.",
+     "llm": "to bow down."
+    },
+    {
+     "column": "right",
+     "x": 1416,
+     "y": 2207,
+     "w": 909,
+     "h": 72,
+     "textract": "ejetooomkwas, I bow down.",
+     "llm": "*ejetooómkwasē*, I bow down."
+    },
+    {
+     "column": "right",
+     "x": 1418,
+     "y": 2279,
+     "w": 1013,
+     "h": 69,
+     "textract": "ejetoo6mkwesumasi, I prostrate",
+     "llm": "*ejetooómkwesumasē*, I prostrate"
+    },
+    {
+     "column": "right",
+     "x": 1485,
+     "y": 2346,
+     "w": 229,
+     "h": 69,
+     "textract": "myself.",
+     "llm": "myself."
+    },
+    {
+     "column": "right",
+     "x": 1420,
+     "y": 2413,
+     "w": 1015,
+     "h": 72,
+     "textract": "ejetooomkwesumooktak, I pros-",
+     "llm": "*ejetooómkwesumooktak*, I pros-"
+    },
+    {
+     "column": "right",
+     "x": 1486,
+     "y": 2480,
+     "w": 766,
+     "h": 68,
+     "textract": "trate myself before him.",
+     "llm": "trate myself before him."
+    },
+    {
+     "column": "right",
+     "x": 1373,
+     "y": 2484,
+     "w": 29,
+     "h": 50,
+     "textract": "I"
+    },
+    {
+     "column": "right",
+     "x": 1416,
+     "y": 2548,
+     "w": 1010,
+     "h": 72,
+     "textract": "ejoonkwedek, it is upside-down,",
+     "llm": "*ejoonkweĭek*, it is upside-down,"
+    },
+    {
+     "column": "right",
+     "x": 1485,
+     "y": 2618,
+     "w": 382,
+     "h": 53,
+     "textract": "hind-before.",
+     "llm": "  hind-before."
+    },
+    {
+     "column": "right",
+     "x": 1413,
+     "y": 2682,
+     "w": 1019,
+     "h": 73,
+     "textract": "ejidoonkwodejadoo, I drag a tree",
+     "llm": "*ejidoonkwodejadoo*, I drag a tree"
+    },
+    {
+     "column": "right",
+     "x": 1484,
+     "y": 2753,
+     "w": 948,
+     "h": 69,
+     "textract": "by the small end, do iny work",
+     "llm": "  by the small end, do my work"
+    },
+    {
+     "column": "right",
+     "x": 1483,
+     "y": 2819,
+     "w": 947,
+     "h": 73,
+     "textract": "at a disadvantage; take it up",
+     "llm": "  at a disadvantage; take it up"
+    },
+    {
+     "column": "right",
+     "x": 1484,
+     "y": 2891,
+     "w": 280,
+     "h": 68,
+     "textract": "wrongly.",
+     "llm": "  wrongly."
+    },
+    {
+     "column": "right",
+     "x": 1416,
+     "y": 2954,
+     "w": 1010,
+     "h": 73,
+     "textract": "ejiguladoo, I thrust it away,",
+     "llm": "*ejiguladoo*, I  thrust  it  away,"
+    },
+    {
+     "column": "right",
+     "x": 1481,
+     "y": 3021,
+     "w": 948,
+     "h": 69,
+     "textract": "send it off; ejiguladase, I am",
+     "llm": "  send it off; *ejiguladasē*, I am"
+    },
+    {
+     "column": "right",
+     "x": 1482,
+     "y": 3092,
+     "w": 950,
+     "h": 70,
+     "textract": "sent off; ejigulalool, I thrust",
+     "llm": "  sent off; *ejigulaoōl*, I thrust"
+    },
+    {
+     "column": "right",
+     "x": 1480,
+     "y": 3158,
+     "w": 952,
+     "h": 72,
+     "textract": "thee away; ejiguladoolók, I",
+     "llm": "  thee  away;  *ejiguladoolók*,  I"
+    },
+    {
+     "column": "right",
+     "x": 1480,
+     "y": 3227,
+     "w": 952,
+     "h": 70,
+     "textract": "send off yours; ejigulase, I",
+     "llm": "  send  off  yours; *ejigulasē*, I"
+    },
+    {
+     "column": "right",
+     "x": 1480,
+     "y": 3297,
+     "w": 631,
+     "h": 68,
+     "textract": "thrust myself away.",
+     "llm": "  thrust myself away."
+    },
+    {
+     "column": "right",
+     "x": 1412,
+     "y": 3361,
+     "w": 1020,
+     "h": 73,
+     "textract": "ejiguledadum, I put it away",
+     "llm": "*ejiguledādum*, I  put  it  away"
+    },
+    {
+     "column": "right",
+     "x": 1480,
+     "y": 3432,
+     "w": 952,
+     "h": 71,
+     "textract": "from my mind, change my",
+     "llm": "  from  my  mind,  change  my"
+    },
+    {
+     "column": "right",
+     "x": 1481,
+     "y": 3504,
+     "w": 434,
+     "h": 68,
+     "textract": "mind, repent.",
+     "llm": "  mind, repent."
+    }
+   ],
+   "interpretations": [
+    {
+     "entryText": "*eguntook*, ahead, in front of.",
+     "out": {
+      "headword": "eguntook",
+      "glosses": [
+       "ahead",
+       "in front of"
+      ],
+      "confidence": 97
+     }
+    },
+    {
+     "entryText": "*eguskegwedāk*, I slap him on\nthe face.",
+     "out": {
+      "headword": "eguskegwedāk",
+      "glosses": [
+       "I slap him on the face."
+      ],
+      "confidence": 96
+     }
+    },
+    {
+     "entryText": "*egwadesmasē*, I place something\nunder the head for a pillow.",
+     "out": {
+      "headword": "egwadesmasē",
+      "glosses": [
+       "I place something under the head for a pillow."
+      ],
+      "confidence": 96
+     }
+    }
+   ]
+  },
+  {
+   "printed": 85,
+   "lines": [
+    {
+     "column": "left",
+     "x": 1047,
+     "y": 427,
+     "w": 188,
+     "h": 66,
+     "textract": "-85-",
+     "llm": "—‘85—"
+    },
+    {
+     "column": "left",
+     "x": 1071,
+     "y": 896,
+     "w": 108,
+     "h": 125,
+     "textract": "L",
+     "llm": "L"
+    },
+    {
+     "column": "left",
+     "x": 520,
+     "y": 1095,
+     "w": 143,
+     "h": 55,
+     "textract": "LAB",
+     "llm": "LAB"
+    },
+    {
+     "column": "left",
+     "x": 111,
+     "y": 1244,
+     "w": 972,
+     "h": 62,
+     "textract": "labãe, a keeler, shallow tub",
+     "llm": "*labāe*, a keeler, shallow tub"
+    },
+    {
+     "column": "left",
+     "x": 182,
+     "y": 1312,
+     "w": 936,
+     "h": 69,
+     "textract": "labatcetc, (dimunitive), a little",
+     "llm": "    *labatcētc*, (dimunitive), a little|"
+    },
+    {
+     "column": "left",
+     "x": 181,
+     "y": 1382,
+     "w": 938,
+     "h": 70,
+     "textract": "tub; ejenagwet is the proper",
+     "llm": "tub; *ejenagwēt* is the proper|"
+    },
+    {
+     "column": "left",
+     "x": 183,
+     "y": 1449,
+     "w": 745,
+     "h": 71,
+     "textract": "word in P. E. I. to-day.",
+     "llm": "word in P. E. I. to-day."
+    },
+    {
+     "column": "left",
+     "x": 109,
+     "y": 1516,
+     "w": 1009,
+     "h": 67,
+     "textract": "labaktestakun, a standard of",
+     "llm": "*labaktestakun*, a standard of|"
+    },
+    {
+     "column": "left",
+     "x": 182,
+     "y": 1587,
+     "w": 934,
+     "h": 66,
+     "textract": "measurement, ruler, compass-",
+     "llm": "measurement, ruler, compass-"
+    },
+    {
+     "column": "left",
+     "x": 182,
+     "y": 1652,
+     "w": 897,
+     "h": 68,
+     "textract": "es, straight-edge, chalk-line.",
+     "llm": "es, straight-edge, chalk-line."
+    },
+    {
+     "column": "left",
+     "x": 112,
+     "y": 1719,
+     "w": 778,
+     "h": 67,
+     "textract": "labaltinawa, holy-water.",
+     "llm": "*labaltināwa*, holy-water."
+    },
+    {
+     "column": "left",
+     "x": 107,
+     "y": 1788,
+     "w": 1007,
+     "h": 69,
+     "textract": "labatködawimk, the holy Sun-",
+     "llm": "*labatkōdāwimk*, the holy Sun-|"
+    },
+    {
+     "column": "left",
+     "x": 182,
+     "y": 1856,
+     "w": 567,
+     "h": 70,
+     "textract": "day, Whitsuntide.",
+     "llm": "day, Whitsuntide."
+    },
+    {
+     "column": "left",
+     "x": 115,
+     "y": 1921,
+     "w": 867,
+     "h": 69,
+     "textract": "labegesigun, silk, a ribbon.",
+     "llm": "*labegēsigun*, silk, a ribbon."
+    },
+    {
+     "column": "left",
+     "x": 110,
+     "y": 1991,
+     "w": 711,
+     "h": 67,
+     "textract": "labegot, the small-pox",
+     "llm": "*labegôt*, the small-pox."
+    },
+    {
+     "column": "left",
+     "x": 113,
+     "y": 2059,
+     "w": 871,
+     "h": 70,
+     "textract": "labelasabe, l, a flaxen rope.",
+     "llm": "*labelasabe*, *l*, a flaxen rope."
+    },
+    {
+     "column": "left",
+     "x": 112,
+     "y": 2126,
+     "w": 433,
+     "h": 64,
+     "textract": "labelask, flax.",
+     "llm": "*labelask*, flax."
+    },
+    {
+     "column": "left",
+     "x": 113,
+     "y": 2194,
+     "w": 1006,
+     "h": 71,
+     "textract": "labesogun, un, a machine for",
+     "llm": "*labesogun*, *un*, a machine for"
+    },
+    {
+     "column": "left",
+     "x": 181,
+     "y": 2264,
+     "w": 448,
+     "h": 69,
+     "textract": "making splits.",
+     "llm": "making splits."
+    },
+    {
+     "column": "left",
+     "x": 113,
+     "y": 2330,
+     "w": 1009,
+     "h": 65,
+     "textract": "Lablalot, Lovet's Road, Round",
+     "llm": "*Lablalōt*, Lovet's Road, Round"
+    },
+    {
+     "column": "left",
+     "x": 183,
+     "y": 2398,
+     "w": 504,
+     "h": 66,
+     "textract": "Hill, Annapolis.",
+     "llm": "Hill, Annapolis."
+    },
+    {
+     "column": "left",
+     "x": 112,
+     "y": 2463,
+     "w": 1004,
+     "h": 70,
+     "textract": "laboksoon, (ladoksoon), a buck-",
+     "llm": "*laboksoon*, (*ladoksoon*), a buck-"
+    },
+    {
+     "column": "left",
+     "x": 180,
+     "y": 2534,
+     "w": 902,
+     "h": 68,
+     "textract": "et, vessel for carrying water.",
+     "llm": "et, vessel for carrying water."
+    },
+    {
+     "column": "left",
+     "x": 111,
+     "y": 2600,
+     "w": 1006,
+     "h": 70,
+     "textract": "laboode, l, a spy-glass, the 'sight'",
+     "llm": "*laboode*,*l*, a spy-glass, the 'sight'"
+    },
+    {
+     "column": "left",
+     "x": 179,
+     "y": 2669,
+     "w": 888,
+     "h": 71,
+     "textract": "of a gun; laboodetc, (dim.).",
+     "llm": "of a gun; *laboodetc*, (dim.)."
+    },
+    {
+     "column": "left",
+     "x": 108,
+     "y": 2736,
+     "w": 1010,
+     "h": 69,
+     "textract": "ladoksoon, (laboksoon), k, a",
+     "llm": "*ladoksoon*, (*laboksoon*), *k*, a"
+    },
+    {
+     "column": "left",
+     "x": 182,
+     "y": 2807,
+     "w": 526,
+     "h": 68,
+     "textract": "bucket, An. gen.",
+     "llm": "bucket, An. gen."
+    },
+    {
+     "column": "left",
+     "x": 110,
+     "y": 2872,
+     "w": 1008,
+     "h": 70,
+     "textract": "lagab, a cellar, (from French",
+     "llm": "*lagab*, a cellar, (from French"
+    },
+    {
+     "column": "left",
+     "x": 185,
+     "y": 2942,
+     "w": 306,
+     "h": 57,
+     "textract": "'la cave').",
+     "llm": "'la cave')."
+    },
+    {
+     "column": "left",
+     "x": 110,
+     "y": 3008,
+     "w": 1004,
+     "h": 69,
+     "textract": "lagigunabe, l, an ornamented",
+     "llm": "*lagīgunabe*, *l*, an ornamented"
+    },
+    {
+     "column": "left",
+     "x": 179,
+     "y": 3077,
+     "w": 850,
+     "h": 68,
+     "textract": "strap or sash, an epaulette.",
+     "llm": "strap or sash, an epaulette."
+    },
+    {
+     "column": "left",
+     "x": 110,
+     "y": 3143,
+     "w": 1000,
+     "h": 70,
+     "textract": "lagitakun, ul, a file, rasp; ala.",
+     "llm": "*lagitakun*, *ul*, a file, rasp; *ala-*"
+    },
+    {
+     "column": "left",
+     "x": 172,
+     "y": 3213,
+     "w": 470,
+     "h": 68,
+     "textract": "gadoo, I file it.",
+     "llm": "*gadoo*, I file it."
+    },
+    {
+     "column": "left",
+     "x": 112,
+     "y": 3282,
+     "w": 597,
+     "h": 68,
+     "textract": "lagun, a cut, gash.",
+     "llm": "*lagun*, a cut, gash."
+    },
+    {
+     "column": "left",
+     "x": 112,
+     "y": 3347,
+     "w": 1000,
+     "h": 71,
+     "textract": "laguna, a wild plant, of three",
+     "llm": "*lagunā*, a wild plant, of three"
+    },
+    {
+     "column": "left",
+     "x": 181,
+     "y": 3418,
+     "w": 749,
+     "h": 69,
+     "textract": "leaves and single berry.",
+     "llm": "leaves and single berry."
+    },
+    {
+     "column": "left",
+     "x": 109,
+     "y": 3484,
+     "w": 1015,
+     "h": 71,
+     "textract": "lagunadoo, I cut it, pierce",
+     "llm": "*lagunadoo*, I cut it, pierce"
+    },
+    {
+     "column": "right",
+     "x": 1565,
+     "y": 1099,
+     "w": 167,
+     "h": 57,
+     "textract": "LAM"
+    },
+    {
+     "column": "right",
+     "x": 1204,
+     "y": 1247,
+     "w": 347,
+     "h": 68,
+     "textract": "through it.",
+     "llm": "through it."
+    },
+    {
+     "column": "right",
+     "x": 1125,
+     "y": 1314,
+     "w": 1019,
+     "h": 77,
+     "textract": "lakpadakunabe, I, the binding of",
+     "llm": "*lakpadakunabe*, *l*, the binding of"
+    },
+    {
+     "column": "right",
+     "x": 1201,
+     "y": 1385,
+     "w": 458,
+     "h": 69,
+     "textract": "a basket-hoop.",
+     "llm": "a  basket-hoop."
+    },
+    {
+     "column": "right",
+     "x": 1135,
+     "y": 1450,
+     "w": 683,
+     "h": 68,
+     "textract": "lakpelakun, a curtain.",
+     "llm": "*lakpelakun*, a curtain."
+    },
+    {
+     "column": "right",
+     "x": 1134,
+     "y": 1517,
+     "w": 1007,
+     "h": 73,
+     "textract": "lamak, inside; lamagal, toward",
+     "llm": "*lamāk*, inside; *lamāgāl*, toward"
+    },
+    {
+     "column": "right",
+     "x": 1200,
+     "y": 1587,
+     "w": 326,
+     "h": 55,
+     "textract": "the inside.",
+     "llm": "the inside."
+    },
+    {
+     "column": "right",
+     "x": 1134,
+     "y": 1651,
+     "w": 1005,
+     "h": 76,
+     "textract": "lamakesun, wood rotting on",
+     "llm": "*lamakesun*,  wood  rotting  on"
+    },
+    {
+     "column": "right",
+     "x": 1199,
+     "y": 1723,
+     "w": 365,
+     "h": 67,
+     "textract": "the ground.",
+     "llm": "the ground."
+    },
+    {
+     "column": "right",
+     "x": 1135,
+     "y": 1789,
+     "w": 866,
+     "h": 71,
+     "textract": "lamakun, k, a ladle, spoon.",
+     "llm": "*lamakun*, *k*, a ladle, spoon."
+    },
+    {
+     "column": "right",
+     "x": 1135,
+     "y": 1857,
+     "w": 1005,
+     "h": 65,
+     "textract": "lamamk, the bottom, beneath",
+     "llm": "*lamamk*,  the  bottom,  beneath"
+    },
+    {
+     "column": "right",
+     "x": 1206,
+     "y": 1926,
+     "w": 937,
+     "h": 63,
+     "textract": "water, bottom of the sea. See",
+     "llm": "water, bottom of the sea.  See"
+    },
+    {
+     "column": "right",
+     "x": 1201,
+     "y": 1991,
+     "w": 250,
+     "h": 69,
+     "textract": "lampok.",
+     "llm": "*lampok*."
+    },
+    {
+     "column": "right",
+     "x": 1133,
+     "y": 2060,
+     "w": 1011,
+     "h": 62,
+     "textract": "lamamkoodook, in the midst of",
+     "llm": "*lamamkoodook*, in  the  midst  of"
+    },
+    {
+     "column": "right",
+     "x": 1204,
+     "y": 2129,
+     "w": 236,
+     "h": 54,
+     "textract": "the sea.",
+     "llm": "the sea."
+    },
+    {
+     "column": "right",
+     "x": 1136,
+     "y": 2195,
+     "w": 1009,
+     "h": 68,
+     "textract": "lamatk, lamatkoodook, within",
+     "llm": "*lamatk*, *lamatkoodook*,  within"
+    },
+    {
+     "column": "right",
+     "x": 1202,
+     "y": 2264,
+     "w": 679,
+     "h": 64,
+     "textract": "the bushes, sheltered.",
+     "llm": "the bushes, sheltered."
+    },
+    {
+     "column": "right",
+     "x": 1136,
+     "y": 2330,
+     "w": 1008,
+     "h": 73,
+     "textract": "lamatkikt, a grove, bush, a for-",
+     "llm": "*lamatkīkt*, a grove, bush, a for-"
+    },
+    {
+     "column": "right",
+     "x": 1203,
+     "y": 2406,
+     "w": 103,
+     "h": 58,
+     "textract": "est,",
+     "llm": "est,"
+    },
+    {
+     "column": "right",
+     "x": 1135,
+     "y": 2466,
+     "w": 1010,
+     "h": 66,
+     "textract": "lambooon, the down or under-",
+     "llm": "*lambooón*, the down or under-"
+    },
+    {
+     "column": "right",
+     "x": 1202,
+     "y": 2534,
+     "w": 934,
+     "h": 66,
+     "textract": "feathers of birds; lambooonit,",
+     "llm": "feathers of birds; *lambooónit*,"
+    },
+    {
+     "column": "right",
+     "x": 1202,
+     "y": 2602,
+     "w": 395,
+     "h": 67,
+     "textract": "he is downy.",
+     "llm": "he is downy."
+    },
+    {
+     "column": "right",
+     "x": 1132,
+     "y": 2670,
+     "w": 1012,
+     "h": 71,
+     "textract": "lamegoosum, I put resin on the",
+     "llm": "*lamegoosum*, I put resin on the"
+    },
+    {
+     "column": "right",
+     "x": 1202,
+     "y": 2737,
+     "w": 940,
+     "h": 68,
+     "textract": "inside of a canoe; [the resin or",
+     "llm": "inside of a canoe;[the resin or"
+    },
+    {
+     "column": "right",
+     "x": 1203,
+     "y": 2804,
+     "w": 940,
+     "h": 72,
+     "textract": "gum from the spruce, fir and",
+     "llm": "gum from the spruce, fir and"
+    },
+    {
+     "column": "right",
+     "x": 1204,
+     "y": 2872,
+     "w": 942,
+     "h": 72,
+     "textract": "pine was prepared and used",
+     "llm": "pine was prepared and used"
+    },
+    {
+     "column": "right",
+     "x": 1206,
+     "y": 2940,
+     "w": 499,
+     "h": 67,
+     "textract": "warm, like tar].",
+     "llm": "warm, like tar]."
+    },
+    {
+     "column": "right",
+     "x": 1142,
+     "y": 3007,
+     "w": 1007,
+     "h": 65,
+     "textract": "lamibunek, the heart of a loaf",
+     "llm": "*'amibunek*, the heart of a loaf"
+    },
+    {
+     "column": "right",
+     "x": 1203,
+     "y": 3076,
+     "w": 832,
+     "h": 65,
+     "textract": "of bread, all but the crust.",
+     "llm": "of bread, all but the crust."
+    },
+    {
+     "column": "right",
+     "x": 1144,
+     "y": 3144,
+     "w": 1004,
+     "h": 70,
+     "textract": "'amigwom, inside the house or",
+     "llm": "*'amigwom*, inside the house or"
+    },
+    {
+     "column": "right",
+     "x": 1204,
+     "y": 3215,
+     "w": 278,
+     "h": 64,
+     "textract": "wigwam.",
+     "llm": "wigwam."
+    },
+    {
+     "column": "right",
+     "x": 1142,
+     "y": 3276,
+     "w": 1006,
+     "h": 74,
+     "textract": "lamiltcun, the palm, or inside",
+     "llm": "*'amiltcun*, the palm, or inside"
+    },
+    {
+     "column": "right",
+     "x": 1205,
+     "y": 3348,
+     "w": 396,
+     "h": 54,
+     "textract": "of the hand.",
+     "llm": "of the hand."
+    },
+    {
+     "column": "right",
+     "x": 1141,
+     "y": 3414,
+     "w": 1010,
+     "h": 73,
+     "textract": "lamitpook, in the night, in a",
+     "llm": "*!amitpook*, in the night, in a"
+    },
+    {
+     "column": "right",
+     "x": 1209,
+     "y": 3488,
+     "w": 215,
+     "h": 51,
+     "textract": "dream.",
+     "llm": "dream."
+    }
+   ],
+   "interpretations": [
+    {
+     "entryText": "*labāe*, a keeler, shallow tub\n    *labatcētc*, (dimunitive), a little|\ntub; *ejenagwēt* is the proper|\nword in P. E. I. to-day.",
+     "out": {
+      "headword": "labāe",
+      "glosses": [
+       "a keeler, shallow tub"
+      ],
+      "derivatives": [
+       {
+        "form": "labatcētc",
+        "gloss": "(diminutive), a little tub"
+       }
+      ],
+      "notes": [
+       "ejenagwēt is the proper word in P. E. I. to-day."
+      ],
+      "cross_refs": [
+       "ejenagwēt"
+      ],
+      "confidence": 88
+     }
+    },
+    {
+     "entryText": "*labaktestakun*, a standard of|\nmeasurement, ruler, compass-\nes, straight-edge, chalk-line.",
+     "out": {
+      "headword": "labaktestakun",
+      "glosses": [
+       "a standard of measurement",
+       "ruler",
+       "compasses",
+       "straight-edge",
+       "chalk-line"
+      ],
+      "confidence": 90
+     }
+    },
+    {
+     "entryText": "*labaltināwa*, holy-water.",
+     "out": {
+      "headword": "labaltināwa",
+      "glosses": [
+       "holy-water"
+      ],
+      "confidence": 97
+     }
+    }
+   ]
+  },
+  {
+   "printed": 130,
+   "lines": [
+    {
+     "column": "left",
+     "x": 754,
+     "y": 437,
+     "w": 143,
+     "h": 57,
+     "textract": "PEB",
+     "llm": "PEB"
+    },
+    {
+     "column": "left",
+     "x": 426,
+     "y": 587,
+     "w": 830,
+     "h": 71,
+     "textract": "neck of land, a peninsula.",
+     "llm": "neck of land, a peninsula."
+    },
+    {
+     "column": "left",
+     "x": 356,
+     "y": 655,
+     "w": 1011,
+     "h": 70,
+     "textract": "pebe, I have a sore (ulcerated)",
+     "llm": "*pebe*, I have a sore (ulcerated)"
+    },
+    {
+     "column": "left",
+     "x": 426,
+     "y": 726,
+     "w": 225,
+     "h": 52,
+     "textract": "mouth.",
+     "llm": "mouth."
+    },
+    {
+     "column": "left",
+     "x": 352,
+     "y": 789,
+     "w": 1021,
+     "h": 70,
+     "textract": "pebimkawa, alum, remedy for",
+     "llm": "*pebimkāwā*, alum, remedy for"
+    },
+    {
+     "column": "left",
+     "x": 419,
+     "y": 861,
+     "w": 370,
+     "h": 53,
+     "textract": "sore mouth.",
+     "llm": "sore mouth."
+    },
+    {
+     "column": "left",
+     "x": 352,
+     "y": 922,
+     "w": 1020,
+     "h": 73,
+     "textract": "peboogoolegwok, pimpled, COV-",
+     "llm": "*peboogoolegwok*, pimpled, cov-"
+    },
+    {
+     "column": "left",
+     "x": 422,
+     "y": 992,
+     "w": 949,
+     "h": 71,
+     "textract": "ered with an eruption, [2]bird-",
+     "llm": "ered with an eruption,[2]bird-"
+    },
+    {
+     "column": "left",
+     "x": 424,
+     "y": 1063,
+     "w": 338,
+     "h": 68,
+     "textract": "eye maple.",
+     "llm": "eye maple."
+    },
+    {
+     "column": "left",
+     "x": 348,
+     "y": 1128,
+     "w": 757,
+     "h": 71,
+     "textract": "pebooskadoo, I shake it.",
+     "llm": "*pebooskadoo*, I shake it."
+    },
+    {
+     "column": "left",
+     "x": 349,
+     "y": 1193,
+     "w": 1020,
+     "h": 73,
+     "textract": "pedabaktusin, I stumble and",
+     "llm": "*pedabâktusin*, I stumble and"
+    },
+    {
+     "column": "left",
+     "x": 424,
+     "y": 1265,
+     "w": 440,
+     "h": 67,
+     "textract": "bruise myself.",
+     "llm": "bruise myself."
+    },
+    {
+     "column": "left",
+     "x": 349,
+     "y": 1329,
+     "w": 951,
+     "h": 71,
+     "textract": "pedabawe, I have a long face.",
+     "llm": "*pedabāwê*, I have a long face."
+    },
+    {
+     "column": "left",
+     "x": 349,
+     "y": 1399,
+     "w": 1017,
+     "h": 71,
+     "textract": "pedagawal, trousers, drawers,",
+     "llm": "*pedagāwāl*, trousers, drawers,"
+    },
+    {
+     "column": "left",
+     "x": 431,
+     "y": 1468,
+     "w": 533,
+     "h": 68,
+     "textract": "(long garments).",
+     "llm": "(long garments)."
+    },
+    {
+     "column": "left",
+     "x": 352,
+     "y": 1534,
+     "w": 585,
+     "h": 71,
+     "textract": "pedäk, long, deep.",
+     "llm": "*pedăk*, long, deep."
+    },
+    {
+     "column": "left",
+     "x": 352,
+     "y": 1603,
+     "w": 767,
+     "h": 70,
+     "textract": "pedalkuk, a deep cavity.",
+     "llm": "*pedalkuk*, a deep cavity."
+    },
+    {
+     "column": "left",
+     "x": 356,
+     "y": 1668,
+     "w": 1016,
+     "h": 70,
+     "textract": "pedasooem, I come through the",
+     "llm": "*pedāsooēm*, I come through the"
+    },
+    {
+     "column": "left",
+     "x": 430,
+     "y": 1740,
+     "w": 350,
+     "h": 67,
+     "textract": "deep snow.",
+     "llm": "deep snow."
+    },
+    {
+     "column": "left",
+     "x": 350,
+     "y": 1803,
+     "w": 820,
+     "h": 73,
+     "textract": "pedatkweak, the sea rises.",
+     "llm": "*pedătkweak*, the sea rises."
+    },
+    {
+     "column": "left",
+     "x": 354,
+     "y": 1870,
+     "w": 1017,
+     "h": 72,
+     "textract": "pedeadasik, it glistens, shines;",
+     "llm": "*pedeadasik*, it glistens, shines;"
+    },
+    {
+     "column": "left",
+     "x": 420,
+     "y": 1939,
+     "w": 952,
+     "h": 71,
+     "textract": "pedoktesk, it makes a glimmer",
+     "llm": "*pedoktesk*, it makes a glimmer"
+    },
+    {
+     "column": "left",
+     "x": 430,
+     "y": 2010,
+     "w": 266,
+     "h": 67,
+     "textract": "of light.",
+     "llm": "of light."
+    },
+    {
+     "column": "left",
+     "x": 352,
+     "y": 2075,
+     "w": 1019,
+     "h": 71,
+     "textract": "pedek. it is inside something;",
+     "llm": "*pedek,* it is inside something;"
+    },
+    {
+     "column": "left",
+     "x": 425,
+     "y": 2144,
+     "w": 719,
+     "h": 55,
+     "textract": "the loaf is in the oven.",
+     "llm": "the loaf is in the oven."
+    },
+    {
+     "column": "left",
+     "x": 358,
+     "y": 2209,
+     "w": 1013,
+     "h": 73,
+     "textract": "pedogamoosegek, a grove of tall",
+     "llm": "*pedogamoosegek*, a grove of tall"
+    },
+    {
+     "column": "left",
+     "x": 426,
+     "y": 2287,
+     "w": 166,
+     "h": 48,
+     "textract": "trees.",
+     "llm": "trees."
+    },
+    {
+     "column": "left",
+     "x": 350,
+     "y": 2345,
+     "w": 1020,
+     "h": 71,
+     "textract": "pedogwat, it is scented, fragrant,",
+     "llm": "*pedōgwat*, it is scented, fragrant,"
+    },
+    {
+     "column": "left",
+     "x": 429,
+     "y": 2416,
+     "w": 317,
+     "h": 69,
+     "textract": "perfumed.",
+     "llm": "perfumed."
+    },
+    {
+     "column": "left",
+     "x": 353,
+     "y": 2482,
+     "w": 1014,
+     "h": 72,
+     "textract": "pedokse, I am tall, long, (pedak)",
+     "llm": "*pedokse*, I am tall, long, (*pedâk*)"
+    },
+    {
+     "column": "left",
+     "x": 347,
+     "y": 2551,
+     "w": 942,
+     "h": 71,
+     "textract": "pedoksit, long-quilled ; (2)",
+     "llm": "*pedoksit,* long-quilled ;  (2)"
+    },
+    {
+     "column": "left",
+     "x": 425,
+     "y": 2619,
+     "w": 947,
+     "h": 72,
+     "textract": "long-quilled animal, a porcu-",
+     "llm": "long-quilled animal, a porcu-"
+    },
+    {
+     "column": "left",
+     "x": 425,
+     "y": 2690,
+     "w": 153,
+     "h": 67,
+     "textract": "pine.",
+     "llm": "pine."
+    },
+    {
+     "column": "left",
+     "x": 352,
+     "y": 2754,
+     "w": 1019,
+     "h": 71,
+     "textract": "pedoktam, I chop it in long",
+     "llm": "*pedoktām*, I chop it in long"
+    },
+    {
+     "column": "left",
+     "x": 428,
+     "y": 2826,
+     "w": 203,
+     "h": 64,
+     "textract": "pieces.",
+     "llm": "pieces."
+    },
+    {
+     "column": "left",
+     "x": 352,
+     "y": 2891,
+     "w": 1019,
+     "h": 69,
+     "textract": "pedoobegasik, a blister, a blood",
+     "llm": "*pēdoobegasik*, a blister, a blood"
+    },
+    {
+     "column": "left",
+     "x": 427,
+     "y": 2958,
+     "w": 946,
+     "h": 71,
+     "textract": "blister; pedooiskoktek, it is",
+     "llm": "blister; *pedooiskoktek*, it is"
+    },
+    {
+     "column": "left",
+     "x": 423,
+     "y": 3025,
+     "w": 950,
+     "h": 71,
+     "textract": "blistered by burning, (scald-",
+     "llm": "blistered by burning, (scald-"
+    },
+    {
+     "column": "left",
+     "x": 424,
+     "y": 3097,
+     "w": 118,
+     "h": 68,
+     "textract": "ing.",
+     "llm": "ing."
+    },
+    {
+     "column": "left",
+     "x": 347,
+     "y": 3162,
+     "w": 1021,
+     "h": 71,
+     "textract": "pedoobuk, I bring him along on",
+     "llm": "*pedoobuk*, I bring him along on"
+    },
+    {
+     "column": "left",
+     "x": 424,
+     "y": 3230,
+     "w": 720,
+     "h": 72,
+     "textract": "my back, (peduptook).",
+     "llm": "my back, (*peduptook*)."
+    },
+    {
+     "column": "left",
+     "x": 350,
+     "y": 3299,
+     "w": 950,
+     "h": 71,
+     "textract": "pedoodoo, I bring it by water.",
+     "llm": "*pedoodoo*, I bring it by water."
+    },
+    {
+     "column": "left",
+     "x": 349,
+     "y": 3365,
+     "w": 883,
+     "h": 72,
+     "textract": "pedoogoon, a cloak, mantle.",
+     "llm": "*pedoogoon*, a cloak, mantle."
+    },
+    {
+     "column": "left",
+     "x": 351,
+     "y": 3436,
+     "w": 1020,
+     "h": 75,
+     "textract": "pedoogoonosum, a blanket, COV-",
+     "llm": "*pedoogoonōsum*, a blanket, cov-"
+    },
+    {
+     "column": "left",
+     "x": 426,
+     "y": 3508,
+     "w": 185,
+     "h": 71,
+     "textract": "ering,",
+     "llm": "ering."
+    },
+    {
+     "column": "right",
+     "x": 1929,
+     "y": 422,
+     "w": 152,
+     "h": 70,
+     "textract": "PEG"
+    },
+    {
+     "column": "right",
+     "x": 1258,
+     "y": 439,
+     "w": 235,
+     "h": 63,
+     "textract": "-130-",
+     "llm": "-130—                    PEG"
+    },
+    {
+     "column": "right",
+     "x": 1388,
+     "y": 582,
+     "w": 1024,
+     "h": 74,
+     "textract": "pedoogwe, I am clad with a",
+     "llm": "*pedoogwe*,  I  am  clad  with  a"
+    },
+    {
+     "column": "right",
+     "x": 1459,
+     "y": 656,
+     "w": 480,
+     "h": 54,
+     "textract": "cloak or shawl.",
+     "llm": "    cloak  or  shawl."
+    },
+    {
+     "column": "right",
+     "x": 1392,
+     "y": 721,
+     "w": 1015,
+     "h": 68,
+     "textract": "Peduobok, Bras d'Or Lake, C.",
+     "llm": "*Pēduobók*,  Bras  d'Or  Lake,  C."
+    },
+    {
+     "column": "right",
+     "x": 1461,
+     "y": 790,
+     "w": 953,
+     "h": 71,
+     "textract": "B., a long dish full of salt-",
+     "llm": "    B.,  a  long  dish  full  of  salt-"
+    },
+    {
+     "column": "right",
+     "x": 1461,
+     "y": 864,
+     "w": 191,
+     "h": 48,
+     "textract": "water.",
+     "llm": "    water."
+    },
+    {
+     "column": "right",
+     "x": 1388,
+     "y": 923,
+     "w": 1024,
+     "h": 72,
+     "textract": "peduptoo, I bring it upon my",
+     "llm": "*peduptoo*,  I  bring  it  upon  my"
+    },
+    {
+     "column": "right",
+     "x": 1460,
+     "y": 995,
+     "w": 166,
+     "h": 54,
+     "textract": "back.",
+     "llm": "    back."
+    },
+    {
+     "column": "right",
+     "x": 1386,
+     "y": 1059,
+     "w": 1032,
+     "h": 70,
+     "textract": "peduweg,I am employed cover-",
+     "llm": "*peduwēgā*,I  am  employed  cover-"
+    },
+    {
+     "column": "right",
+     "x": 1456,
+     "y": 1128,
+     "w": 958,
+     "h": 69,
+     "textract": "ing a wigwam with extra",
+     "llm": "    ing  a  wigwam  with  extra"
+    },
+    {
+     "column": "right",
+     "x": 1457,
+     "y": 1195,
+     "w": 814,
+     "h": 71,
+     "textract": "branches to keep it warm.",
+     "llm": "    branches to  keep  it  warm."
+    },
+    {
+     "column": "right",
+     "x": 1385,
+     "y": 1262,
+     "w": 1022,
+     "h": 71,
+     "textract": "pegabäwe, I am virile, noble,",
+     "llm": "*pegabāwe*,  I  am  virile,  noble,"
+    },
+    {
+     "column": "right",
+     "x": 1458,
+     "y": 1331,
+     "w": 949,
+     "h": 73,
+     "textract": "manly - looking; (pekskowe,",
+     "llm": "    manly - looking ;  (*pekskowe*,"
+    },
+    {
+     "column": "right",
+     "x": 1462,
+     "y": 1400,
+     "w": 325,
+     "h": 68,
+     "textract": "womanly).",
+     "llm": "    womanly)."
+    },
+    {
+     "column": "right",
+     "x": 1386,
+     "y": 1465,
+     "w": 1026,
+     "h": 68,
+     "textract": "pegadoo, I break it off, break",
+     "llm": "*pegadoo*,  I  break  it  off,  break"
+    },
+    {
+     "column": "right",
+     "x": 1459,
+     "y": 1533,
+     "w": 632,
+     "h": 69,
+     "textract": "bread, (pegenadoo).",
+     "llm": "bread, (*pegenadoo*)."
+    },
+    {
+     "column": "right",
+     "x": 1386,
+     "y": 1600,
+     "w": 1027,
+     "h": 70,
+     "textract": "begajeankrendum, I keep it care-",
+     "llm": "*begajeankwodum*, I keep it care-"
+    },
+    {
+     "column": "right",
+     "x": 1459,
+     "y": 1667,
+     "w": 950,
+     "h": 71,
+     "textract": "fully; (begajodum); pegajeak,",
+     "llm": "fully; (*pegajodum*); *pegajeak*,"
+    },
+    {
+     "column": "right",
+     "x": 1459,
+     "y": 1737,
+     "w": 776,
+     "h": 69,
+     "textract": "I take good care of him.",
+     "llm": "I take good care of him."
+    },
+    {
+     "column": "right",
+     "x": 1379,
+     "y": 1799,
+     "w": 1027,
+     "h": 76,
+     "textract": "pegajenoogwadoo, I pulverize it,",
+     "llm": "*pegajenoogwadoo*, I pulverize it,"
+    },
+    {
+     "column": "right",
+     "x": 1459,
+     "y": 1872,
+     "w": 505,
+     "h": 71,
+     "textract": "grind it up fine.",
+     "llm": "grind it up fine."
+    },
+    {
+     "column": "right",
+     "x": 1389,
+     "y": 1939,
+     "w": 1022,
+     "h": 70,
+     "textract": "pejak, straight, it is straight;",
+     "llm": "*pejak*, straight, it is straight;"
+    },
+    {
+     "column": "right",
+     "x": 1451,
+     "y": 2006,
+     "w": 957,
+     "h": 72,
+     "textract": "pegogwadoo, I straighen it;",
+     "llm": "*pegogwadoo*, I straighen it;"
+    },
+    {
+     "column": "right",
+     "x": 1453,
+     "y": 2079,
+     "w": 727,
+     "h": 67,
+     "textract": "pegokse, I am straight.",
+     "llm": "*pegokse*, I am straight."
+    },
+    {
+     "column": "right",
+     "x": 1387,
+     "y": 2143,
+     "w": 1020,
+     "h": 69,
+     "textract": "pegakun, a rib, the 'standard'",
+     "llm": "*pegakun*, a rib, the 'standard'"
+    },
+    {
+     "column": "right",
+     "x": 1462,
+     "y": 2211,
+     "w": 952,
+     "h": 71,
+     "textract": "of a basket; pegun, the rib of",
+     "llm": "of a basket; *pegun*, the rib of"
+    },
+    {
+     "column": "right",
+     "x": 1461,
+     "y": 2280,
+     "w": 205,
+     "h": 69,
+     "textract": "a ship.",
+     "llm": "a ship."
+    },
+    {
+     "column": "right",
+     "x": 1388,
+     "y": 2346,
+     "w": 1023,
+     "h": 71,
+     "textract": "pegalkoodunase, I purse up the",
+     "llm": "*pegalkoodunase*, I purse up the"
+    },
+    {
+     "column": "right",
+     "x": 1465,
+     "y": 2415,
+     "w": 946,
+     "h": 70,
+     "textract": "mouth, close it primly, main-",
+     "llm": "mouth, close it primly, main-"
+    },
+    {
+     "column": "right",
+     "x": 1463,
+     "y": 2483,
+     "w": 680,
+     "h": 66,
+     "textract": "tain dignified silence.",
+     "llm": "tain dignified silence."
+    },
+    {
+     "column": "right",
+     "x": 1386,
+     "y": 2549,
+     "w": 1023,
+     "h": 71,
+     "textract": "pegaoolabase, I look down;",
+     "llm": "*pegāoolabase*, I look down;"
+    },
+    {
+     "column": "right",
+     "x": 1340,
+     "y": 2569,
+     "w": 35,
+     "h": 37,
+     "textract": "a"
+    },
+    {
+     "column": "right",
+     "x": 1466,
+     "y": 2619,
+     "w": 446,
+     "h": 69,
+     "textract": "(pegawabase).",
+     "llm": "(*pegāwabase*)."
+    },
+    {
+     "column": "right",
+     "x": 1390,
+     "y": 2685,
+     "w": 1018,
+     "h": 73,
+     "textract": "pegat, it wanes, diminishes in",
+     "llm": "*pegai*, it wanes, diminishes in"
+    },
+    {
+     "column": "right",
+     "x": 1458,
+     "y": 2757,
+     "w": 687,
+     "h": 63,
+     "textract": "size, the moon wanes,",
+     "llm": "size, the moon wanes,"
+    },
+    {
+     "column": "right",
+     "x": 1385,
+     "y": 2822,
+     "w": 1024,
+     "h": 71,
+     "textract": "pegawadoo, I lower it; pega-",
+     "llm": "*pegāwadoo*, I lower it; *pega-*"
+    },
+    {
+     "column": "right",
+     "x": 1462,
+     "y": 2892,
+     "w": 625,
+     "h": 64,
+     "textract": "wase, I come down.",
+     "llm": "*wase*, I come down."
+    },
+    {
+     "column": "right",
+     "x": 1387,
+     "y": 2957,
+     "w": 1025,
+     "h": 74,
+     "textract": "pegaweagase, I lower myself",
+     "llm": "*pegāweagase*, I lower myself"
+    },
+    {
+     "column": "right",
+     "x": 1458,
+     "y": 3028,
+     "w": 673,
+     "h": 70,
+     "textract": "down; (pegawaluse).",
+     "llm": "down; (*pegawaluse*)."
+    },
+    {
+     "column": "right",
+     "x": 1385,
+     "y": 3086,
+     "w": 1028,
+     "h": 78,
+     "textract": "pegepuogwe, a side of meat, half",
+     "llm": "*pegepoogwe*, a side of meat, half"
+    },
+    {
+     "column": "right",
+     "x": 1457,
+     "y": 3178,
+     "w": 293,
+     "h": 41,
+     "textract": "a carcass.",
+     "llm": "a carcass."
+    },
+    {
+     "column": "right",
+     "x": 1380,
+     "y": 3225,
+     "w": 1030,
+     "h": 75,
+     "textract": "pegedabedum, I use it a long",
+     "llm": "*pegedabedum*, I use it a long"
+    },
+    {
+     "column": "right",
+     "x": 1456,
+     "y": 3293,
+     "w": 952,
+     "h": 75,
+     "textract": "time; pegedunum, I hold it a",
+     "llm": "time; *pegĕdunum*, I hold it a"
+    },
+    {
+     "column": "right",
+     "x": 1454,
+     "y": 3364,
+     "w": 322,
+     "h": 71,
+     "textract": "long time.",
+     "llm": "long time."
+    },
+    {
+     "column": "right",
+     "x": 1386,
+     "y": 3429,
+     "w": 1024,
+     "h": 78,
+     "textract": "pegedabe, I sit up late, (a long",
+     "llm": "*pegedabe*, I sit up late, (a long"
+    },
+    {
+     "column": "right",
+     "x": 1457,
+     "y": 3504,
+     "w": 187,
+     "h": 70,
+     "textract": "time).",
+     "llm": "time)."
+    }
+   ],
+   "interpretations": [
+    {
+     "entryText": "*pebe*, I have a sore (ulcerated)\nmouth.",
+     "out": {
+      "headword": "pebe",
+      "glosses": [
+       "I have a sore (ulcerated) mouth"
+      ],
+      "confidence": 96
+     }
+    },
+    {
+     "entryText": "*pebimkāwā*, alum, remedy for\nsore mouth.",
+     "out": {
+      "headword": "pebimkāwā",
+      "glosses": [
+       "alum",
+       "remedy for sore mouth"
+      ],
+      "confidence": 95
+     }
+    },
+    {
+     "entryText": "*peboogoolegwok*, pimpled, cov-\nered with an eruption,[2]bird-\neye maple.",
+     "out": {
+      "headword": "peboogoolegwok",
+      "glosses": [
+       "pimpled, covered with an eruption",
+       "bird-eye maple"
+      ],
+      "confidence": 85
+     }
+    }
+   ]
+  },
+  {
+   "printed": 170,
+   "lines": [
+    {
+     "column": "left",
+     "x": 739,
+     "y": 410,
+     "w": 182,
+     "h": 53,
+     "textract": "WEN",
+     "llm": "WEN"
+    },
+    {
+     "column": "left",
+     "x": 333,
+     "y": 560,
+     "w": 515,
+     "h": 63,
+     "textract": "wenjawe, I lead.",
+     "llm": "*wenjāwe*, I lead."
+    },
+    {
+     "column": "left",
+     "x": 330,
+     "y": 626,
+     "w": 1009,
+     "h": 67,
+     "textract": "wenjooe, a prefix meaning",
+     "llm": "*wenjooe*, a  prefix  m e a n i n g"
+    },
+    {
+     "column": "left",
+     "x": 402,
+     "y": 694,
+     "w": 552,
+     "h": 63,
+     "textract": "French; Wenootc.",
+     "llm": "French; *Wenootc.*"
+    },
+    {
+     "column": "left",
+     "x": 334,
+     "y": 759,
+     "w": 1011,
+     "h": 68,
+     "textract": "wenjooegan, (wenjoogwam), a",
+     "llm": "*wenjooēgan*, (*wenjoogwam*), a"
+    },
+    {
+     "column": "left",
+     "x": 398,
+     "y": 831,
+     "w": 941,
+     "h": 61,
+     "textract": "frame house, a French house.",
+     "llm": "frame house, a French house."
+    },
+    {
+     "column": "left",
+     "x": 337,
+     "y": 896,
+     "w": 799,
+     "h": 68,
+     "textract": "wenjooegantcetc, a cabin.",
+     "llm": "*wenjooegantcētc*, a cabin."
+    },
+    {
+     "column": "left",
+     "x": 332,
+     "y": 963,
+     "w": 1004,
+     "h": 67,
+     "textract": "wenjooegetakun, a grindstone.",
+     "llm": "*wenjooegētakŭn*,  a grindstone."
+    },
+    {
+     "column": "left",
+     "x": 330,
+     "y": 1032,
+     "w": 1012,
+     "h": 65,
+     "textract": "wenjooekogumin, plums, French",
+     "llm": "*wenjooekogumin*, plums, French"
+    },
+    {
+     "column": "left",
+     "x": 408,
+     "y": 1097,
+     "w": 931,
+     "h": 65,
+     "textract": "thorn-berries,cf.maktomanétc-",
+     "llm": "thorn-berries,cf.*maktomanētc-*"
+    },
+    {
+     "column": "left",
+     "x": 397,
+     "y": 1167,
+     "w": 500,
+     "h": 61,
+     "textract": "kul, black fruit.",
+     "llm": "*kul*, black fruit."
+    },
+    {
+     "column": "left",
+     "x": 329,
+     "y": 1234,
+     "w": 1007,
+     "h": 66,
+     "textract": "wenjooesegubun, a turnip,",
+     "llm": "*wenjooesegubun*, a  t u r n i p,"
+    },
+    {
+     "column": "left",
+     "x": 400,
+     "y": 1305,
+     "w": 461,
+     "h": 62,
+     "textract": "French potato.",
+     "llm": "French potato."
+    },
+    {
+     "column": "left",
+     "x": 329,
+     "y": 1368,
+     "w": 687,
+     "h": 66,
+     "textract": "wenjooetagun, an oar.",
+     "llm": "*wenjooetagun*, an oar."
+    },
+    {
+     "column": "left",
+     "x": 329,
+     "y": 1437,
+     "w": 871,
+     "h": 66,
+     "textract": "wenjooetcema, I row a boat.",
+     "llm": "*wenjooetcēmā*, I row a boat."
+    },
+    {
+     "column": "left",
+     "x": 328,
+     "y": 1505,
+     "w": 1012,
+     "h": 68,
+     "textract": "wenjoolk, a ship, frigate, war-",
+     "llm": "*wenjoolk*, a ship, frigate, war-"
+    },
+    {
+     "column": "left",
+     "x": 395,
+     "y": 1574,
+     "w": 150,
+     "h": 65,
+     "textract": "ship.",
+     "llm": "shĭp."
+    },
+    {
+     "column": "left",
+     "x": 328,
+     "y": 1639,
+     "w": 954,
+     "h": 69,
+     "textract": "wenjoolkadook, on board ship.",
+     "llm": "*wenjoolkadook*, on board ship."
+    },
+    {
+     "column": "left",
+     "x": 328,
+     "y": 1708,
+     "w": 1009,
+     "h": 68,
+     "textract": "wenjoolkwa, pertaining to ships,",
+     "llm": "*wenjoolkwā*, pertaining to ships,"
+    },
+    {
+     "column": "left",
+     "x": 393,
+     "y": 1778,
+     "w": 191,
+     "h": 61,
+     "textract": "naval;",
+     "llm": "naval;"
+    },
+    {
+     "column": "left",
+     "x": 336,
+     "y": 1842,
+     "w": 1005,
+     "h": 68,
+     "textract": "wenjoosoon, an apple; a French",
+     "llm": "*wenjoosoon*, an apple; a French"
+    },
+    {
+     "column": "left",
+     "x": 395,
+     "y": 1910,
+     "w": 941,
+     "h": 67,
+     "textract": "cranberry; wenjoosoonkade,",
+     "llm": "cranberry; *wenjoosoonākade*,"
+    },
+    {
+     "column": "left",
+     "x": 396,
+     "y": 1980,
+     "w": 357,
+     "h": 50,
+     "textract": "an orchard.",
+     "llm": "an orchard."
+    },
+    {
+     "column": "left",
+     "x": 333,
+     "y": 2046,
+     "w": 981,
+     "h": 67,
+     "textract": "wenjoetag, I box, strik",
+     "llm": "*wenjoŏtāgā*, I box, s t r i k e"
+    },
+    {
+     "column": "left",
+     "x": 403,
+     "y": 2115,
+     "w": 484,
+     "h": 52,
+     "textract": "French-fashion.",
+     "llm": "French-fashion."
+    },
+    {
+     "column": "left",
+     "x": 329,
+     "y": 2184,
+     "w": 1012,
+     "h": 61,
+     "textract": "wenjooteam, an OX or cow, a",
+     "llm": "*wenjootĕam*, an ox or cow, a"
+    },
+    {
+     "column": "left",
+     "x": 399,
+     "y": 2248,
+     "w": 937,
+     "h": 67,
+     "textract": "French moose; wenjooteam.",
+     "llm": "French moose; *wenjootĕam-*"
+    },
+    {
+     "column": "left",
+     "x": 399,
+     "y": 2318,
+     "w": 355,
+     "h": 61,
+     "textract": "ootc, a calf.",
+     "llm": "*ootc*, a calf."
+    },
+    {
+     "column": "left",
+     "x": 324,
+     "y": 2383,
+     "w": 654,
+     "h": 67,
+     "textract": "wenjouteamwa, beef.",
+     "llm": "*wenjootĕamwā*, beef."
+    },
+    {
+     "column": "left",
+     "x": 327,
+     "y": 2454,
+     "w": 1008,
+     "h": 64,
+     "textract": "wenjooteamwese, I bellow: wen.",
+     "llm": "*wenjootĕamwēse*, I bellow; *wen-*"
+    },
+    {
+     "column": "left",
+     "x": 380,
+     "y": 2520,
+     "w": 963,
+     "h": 66,
+     "textract": "jooteamootcwesink, a n up-",
+     "llm": "*jootĕamootcwesimk*, a n u p-"
+    },
+    {
+     "column": "left",
+     "x": 397,
+     "y": 2606,
+     "w": 146,
+     "h": 39,
+     "textract": "roar.",
+     "llm": "roar."
+    },
+    {
+     "column": "left",
+     "x": 328,
+     "y": 2658,
+     "w": 1014,
+     "h": 65,
+     "textract": "wenjootckwetc, a young French",
+     "llm": "*wenjootckwetc*, a young French"
+    },
+    {
+     "column": "left",
+     "x": 397,
+     "y": 2725,
+     "w": 942,
+     "h": 71,
+     "textract": "woman; [2] any white woman.",
+     "llm": "woman;'[2] any white woman."
+    },
+    {
+     "column": "left",
+     "x": 326,
+     "y": 2792,
+     "w": 585,
+     "h": 67,
+     "textract": "wenjunki, I adopt.",
+     "llm": "*wenjunkī*, I adopt."
+    },
+    {
+     "column": "left",
+     "x": 329,
+     "y": 2862,
+     "w": 736,
+     "h": 61,
+     "textract": "wenkâbeme, a servant.",
+     "llm": "*wenkâbeme*, a servant."
+    },
+    {
+     "column": "left",
+     "x": 329,
+     "y": 2928,
+     "w": 1015,
+     "h": 67,
+     "textract": "wenmajak, it is troublesome, it",
+     "llm": "*wenmajāk*, it is troublesome, it"
+    },
+    {
+     "column": "left",
+     "x": 395,
+     "y": 2997,
+     "w": 621,
+     "h": 66,
+     "textract": "causes me suffering.",
+     "llm": "causes me suffering."
+    },
+    {
+     "column": "left",
+     "x": 326,
+     "y": 3065,
+     "w": 979,
+     "h": 66,
+     "textract": "wenmajetabloomk, condem",
+     "llm": "*wenmajetabloomk*, c o n d e m"
+    },
+    {
+     "column": "left",
+     "x": 395,
+     "y": 3135,
+     "w": 216,
+     "h": 51,
+     "textract": "nation.",
+     "llm": "nation."
+    },
+    {
+     "column": "left",
+     "x": 326,
+     "y": 3199,
+     "w": 1013,
+     "h": 65,
+     "textract": "wenmajilsomk, excommunica-",
+     "llm": "*wenmajīlsomk*, excommunica-"
+    },
+    {
+     "column": "left",
+     "x": 395,
+     "y": 3267,
+     "w": 949,
+     "h": 70,
+     "textract": "tion, cursing, fury poured",
+     "llm": "tion, cursing, fury poured"
+    },
+    {
+     "column": "left",
+     "x": 397,
+     "y": 3347,
+     "w": 109,
+     "h": 44,
+     "textract": "out.",
+     "llm": "out."
+    },
+    {
+     "column": "left",
+     "x": 328,
+     "y": 3404,
+     "w": 1016,
+     "h": 69,
+     "textract": "wenmajilsoomajul, I curse them",
+     "llm": "*wenmajīlsoomajul*, I curse them"
+    },
+    {
+     "column": "left",
+     "x": 392,
+     "y": 3475,
+     "w": 298,
+     "h": 67,
+     "textract": "in a rage.",
+     "llm": "in a rage."
+    },
+    {
+     "column": "right",
+     "x": 1873,
+     "y": 408,
+     "w": 167,
+     "h": 52,
+     "textract": "WES"
+    },
+    {
+     "column": "right",
+     "x": 1311,
+     "y": 421,
+     "w": 178,
+     "h": 49,
+     "textract": "-170-",
+     "llm": "-170—                    WES"
+    },
+    {
+     "column": "right",
+     "x": 1360,
+     "y": 557,
+     "w": 701,
+     "h": 67,
+     "textract": "wenmajode, adversity.",
+     "llm": "*wenmajode*, adversity."
+    },
+    {
+     "column": "right",
+     "x": 1361,
+     "y": 625,
+     "w": 718,
+     "h": 66,
+     "textract": "wenmajogun, anguish.",
+     "llm": "*wenmajogun*, anguish."
+    },
+    {
+     "column": "right",
+     "x": 1363,
+     "y": 693,
+     "w": 1008,
+     "h": 64,
+     "textract": "weoos, meat; weoosaboo, broth.",
+     "llm": "*wēoos*, meat ; *wēoosaboo*, broth."
+    },
+    {
+     "column": "right",
+     "x": 1363,
+     "y": 761,
+     "w": 434,
+     "h": 66,
+     "textract": "wep, the pith.",
+     "llm": "*wep*, the pith."
+    },
+    {
+     "column": "right",
+     "x": 1362,
+     "y": 828,
+     "w": 916,
+     "h": 67,
+     "textract": "wepkoomakuna, I am armed.",
+     "llm": "*wepkoomakunā*, I am armed."
+    },
+    {
+     "column": "right",
+     "x": 1361,
+     "y": 895,
+     "w": 1010,
+     "h": 66,
+     "textract": "wepkoomakunogwom, a fort, an",
+     "llm": "*wepkoomakunogwom*, a fort, an"
+    },
+    {
+     "column": "right",
+     "x": 1427,
+     "y": 965,
+     "w": 236,
+     "h": 50,
+     "textract": "arsenal.",
+     "llm": "    arsenal."
+    },
+    {
+     "column": "right",
+     "x": 1357,
+     "y": 1031,
+     "w": 1017,
+     "h": 66,
+     "textract": "wepkoomanul, armour; poogoo-",
+     "llm": "*wepkoomanul*, armour; *poogoo-*"
+    },
+    {
+     "column": "right",
+     "x": 1424,
+     "y": 1098,
+     "w": 218,
+     "h": 54,
+     "textract": "manul.",
+     "llm": "    *manul.*"
+    },
+    {
+     "column": "right",
+     "x": 1357,
+     "y": 1166,
+     "w": 1015,
+     "h": 65,
+     "textract": "wes, a muskrat house, a hay-",
+     "llm": "*wēs*, a muskrat house, a hay-"
+    },
+    {
+     "column": "right",
+     "x": 1423,
+     "y": 1234,
+     "w": 158,
+     "h": 52,
+     "textract": "cock.",
+     "llm": "    cock."
+    },
+    {
+     "column": "right",
+     "x": 1357,
+     "y": 1300,
+     "w": 1017,
+     "h": 69,
+     "textract": "wesabegalow, gum; atranslucent",
+     "llm": "*wesabegalow*, gum; a translucent"
+    },
+    {
+     "column": "right",
+     "x": 1424,
+     "y": 1372,
+     "w": 315,
+     "h": 49,
+     "textract": "substance.",
+     "llm": "    substance."
+    },
+    {
+     "column": "right",
+     "x": 1357,
+     "y": 1434,
+     "w": 818,
+     "h": 68,
+     "textract": "wesak, a scar, a calamity.",
+     "llm": "*wesāk*, a scar, a calamity."
+    },
+    {
+     "column": "right",
+     "x": 1358,
+     "y": 1506,
+     "w": 787,
+     "h": 64,
+     "textract": "wesame, very, too much.",
+     "llm": "*wesamé*, very, too much."
+    },
+    {
+     "column": "right",
+     "x": 1357,
+     "y": 1570,
+     "w": 1016,
+     "h": 69,
+     "textract": "wesameboogwelk, very much,",
+     "llm": "*wesameboogwelk*, very much,"
+    },
+    {
+     "column": "right",
+     "x": 1432,
+     "y": 1640,
+     "w": 402,
+     "h": 64,
+     "textract": "(exorbitant).",
+     "llm": "  (exorbitant)."
+    },
+    {
+     "column": "right",
+     "x": 1358,
+     "y": 1704,
+     "w": 912,
+     "h": 69,
+     "textract": "wesamesumk I pamper him.",
+     "llm": "*wesamesumk*, I pamper him."
+    },
+    {
+     "column": "right",
+     "x": 1362,
+     "y": 1773,
+     "w": 1013,
+     "h": 68,
+     "textract": "wesamenkusiu, premature; wes-",
+     "llm": "*wesamenkusiū*, premature; *wes-*"
+    },
+    {
+     "column": "right",
+     "x": 1426,
+     "y": 1843,
+     "w": 941,
+     "h": 61,
+     "textract": "ameoobootc, a little too soon.",
+     "llm": "  *ameooboolc*, a little too soon."
+    },
+    {
+     "column": "right",
+     "x": 1362,
+     "y": 1908,
+     "w": 1014,
+     "h": 69,
+     "textract": "wesawak, yellow, red, burned",
+     "llm": "*wesawāk*, yellow, red, burned"
+    },
+    {
+     "column": "right",
+     "x": 1427,
+     "y": 1981,
+     "w": 216,
+     "h": 51,
+     "textract": "umber.",
+     "llm": "  umber."
+    },
+    {
+     "column": "right",
+     "x": 1353,
+     "y": 2045,
+     "w": 485,
+     "h": 67,
+     "textract": "wesase, I glide.",
+     "llm": "*wesāse*, I glide."
+    },
+    {
+     "column": "right",
+     "x": 1356,
+     "y": 2110,
+     "w": 832,
+     "h": 68,
+     "textract": "wesáwegesum, I scorch it.",
+     "llm": "*wesâwegesum*, I scorch it."
+    },
+    {
+     "column": "right",
+     "x": 1359,
+     "y": 2181,
+     "w": 750,
+     "h": 61,
+     "textract": "wesedoonit, a tea-kettle.",
+     "llm": "*wesedoonit*, a tea-kettle."
+    },
+    {
+     "column": "right",
+     "x": 1358,
+     "y": 2248,
+     "w": 968,
+     "h": 67,
+     "textract": "wesegese, I smart from a burn.",
+     "llm": "*wēsegese*, I smart from a burn."
+    },
+    {
+     "column": "right",
+     "x": 1357,
+     "y": 2315,
+     "w": 1014,
+     "h": 69,
+     "textract": "wesek, a sapling; wejek, p1: gul,",
+     "llm": "*wesek*, a sapling; *wejek*, pl. *gul*,"
+    },
+    {
+     "column": "right",
+     "x": 1429,
+     "y": 2385,
+     "w": 485,
+     "h": 55,
+     "textract": "P. E. I. dialect.",
+     "llm": "  P. E. I. dialect."
+    },
+    {
+     "column": "right",
+     "x": 1370,
+     "y": 2452,
+     "w": 755,
+     "h": 62,
+     "textract": "Wesek, Gibraltar, N. S.",
+     "llm": "*Wesek*,. Gibraltar, N. S."
+    },
+    {
+     "column": "right",
+     "x": 1356,
+     "y": 2518,
+     "w": 947,
+     "h": 68,
+     "textract": "wesemoogwa, I escape, avoid.",
+     "llm": "*wesemoogwā*, I escape, avoid."
+    },
+    {
+     "column": "right",
+     "x": 1359,
+     "y": 2588,
+     "w": 622,
+     "h": 62,
+     "textract": "weskakelum, a kiss.",
+     "llm": "*weskakeĺum*, a kiss."
+    },
+    {
+     "column": "right",
+     "x": 1361,
+     "y": 2654,
+     "w": 1015,
+     "h": 63,
+     "textract": "weskakeluma, kiss line, embrace.",
+     "llm": "*weskakelumā*, kiss me, embrace."
+    },
+    {
+     "column": "right",
+     "x": 1358,
+     "y": 2722,
+     "w": 1019,
+     "h": 68,
+     "textract": "weskakelumuk, I greet, salute",
+     "llm": "*weskakelumuk*, I greet, salute"
+    },
+    {
+     "column": "right",
+     "x": 1427,
+     "y": 2792,
+     "w": 564,
+     "h": 61,
+     "textract": "him, honour him.",
+     "llm": "him, honour him."
+    },
+    {
+     "column": "right",
+     "x": 1360,
+     "y": 2856,
+     "w": 1015,
+     "h": 69,
+     "textract": "weskawae, I laugh; weskäwada-",
+     "llm": "*weskāwāe*, I laugh; *weskāwadā-*"
+    },
+    {
+     "column": "right",
+     "x": 1425,
+     "y": 2928,
+     "w": 879,
+     "h": 66,
+     "textract": "dum, I consider it pleasant.",
+     "llm": "*dum*, I consider it pleasant."
+    },
+    {
+     "column": "right",
+     "x": 1360,
+     "y": 2995,
+     "w": 635,
+     "h": 62,
+     "textract": "weskawâse, I haunt.",
+     "llm": "*weskawâse*, I haunt."
+    },
+    {
+     "column": "right",
+     "x": 1363,
+     "y": 3063,
+     "w": 738,
+     "h": 65,
+     "textract": "weskawegwase, I smile.",
+     "llm": "*weskawegwase*, I smile."
+    },
+    {
+     "column": "right",
+     "x": 1360,
+     "y": 3128,
+     "w": 1008,
+     "h": 70,
+     "textract": "weskijadoo, I place earth on it.",
+     "llm": "*weskijadoo*, I place earth on it."
+    },
+    {
+     "column": "right",
+     "x": 1360,
+     "y": 3200,
+     "w": 748,
+     "h": 67,
+     "textract": "weskijenooe, I am born.",
+     "llm": "*weskijenooe*, I am born."
+    },
+    {
+     "column": "right",
+     "x": 1359,
+     "y": 3265,
+     "w": 1017,
+     "h": 71,
+     "textract": "weskitegadoo, I gild it, put gold",
+     "llm": "*weskitegadoo*, I gild it, put gold"
+    },
+    {
+     "column": "right",
+     "x": 1426,
+     "y": 3338,
+     "w": 160,
+     "h": 53,
+     "textract": "on it.",
+     "llm": "on it."
+    },
+    {
+     "column": "right",
+     "x": 1359,
+     "y": 3401,
+     "w": 1012,
+     "h": 71,
+     "textract": "wesködum, I have it, possess it,",
+     "llm": "*weskōdum*, I have it, possess it,"
+    },
+    {
+     "column": "right",
+     "x": 1427,
+     "y": 3474,
+     "w": 346,
+     "h": 57,
+     "textract": "mention it.",
+     "llm": "mention it."
+    }
+   ],
+   "interpretations": [
+    {
+     "entryText": "*wenjāwe*, I lead.",
+     "out": {
+      "headword": "wenjāwe",
+      "glosses": [
+       "I lead"
+      ],
+      "confidence": 97
+     }
+    },
+    {
+     "entryText": "*wenjooe*, a  prefix  m e a n i n g\nFrench; *Wenootc.*",
+     "out": {
+      "headword": "wenjooe",
+      "glosses": [
+       "a prefix meaning French"
+      ],
+      "cross_refs": [
+       "Wenootc."
+      ],
+      "confidence": 82
+     }
+    },
+    {
+     "entryText": "*wenjooēgan*, (*wenjoogwam*), a\nframe house, a French house.",
+     "out": {
+      "headword": "wenjooēgan",
+      "alt_spellings": [
+       "wenjoogwam"
+      ],
+      "glosses": [
+       "a frame house",
+       "a French house"
+      ],
+      "confidence": 92
+     }
+    }
+   ]
+  }
+ ]
+}
