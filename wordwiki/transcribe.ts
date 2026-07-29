@@ -166,7 +166,11 @@ const textStageSchema = (field: string, description: string) => ({
         [field]: {type: 'string', description},
         confidence: {type: 'integer', description: 'overall confidence 0-100'},
     },
-    required: [field, 'confidence'],
+    // LENIENT on purpose (dz 2026-07-28): the model occasionally omits a
+    // required field despite the schema; a hard requirement only converts
+    // that into a crash/skip.  Consumers coerce (missing text -> '',
+    // missing confidence -> 0) and the c0 routes into the escalation gate.
+    required: [],
 });
 
 // LANGUAGE-TAGGED RUNS (dz 2026-07-11: marking content language early makes
@@ -177,6 +181,27 @@ const textStageSchema = (field: string, description: string) => ({
 // markers) so the tagging can never collide with the text's own brackets
 // or the [a|b] ambiguity markers.
 export interface TaggedRun { text: string; lang: 'mm' | 'fr' | 'cit'; }
+
+/** Tolerant read of a runs-stage output: a proper runs array passes
+ *  through; a flat string field becomes one mm run; anything else is
+ *  empty.  Paired with lenient schemas above. */
+export function coerceRuns(out: any): TaggedRun[] {
+    if(Array.isArray(out?.runs))
+        return out.runs
+            .filter((r: any) => typeof r?.text === 'string')
+            .map((r: any) => ({text: r.text,
+                               lang: (r.lang === 'fr' || r.lang === 'cit') ? r.lang : 'mm'}));
+    const flat = [out?.text, out?.transcription, out?.expanded, out?.value]
+        .find(v => typeof v === 'string' && v.trim() !== '');
+    return flat ? [{text: String(flat), lang: 'mm'}] : [];
+}
+
+/** Tolerant confidence: missing/malformed -> 0, which the escalation
+ *  gate treats as maximal suspicion. */
+export function coerceConfidence(out: any): number {
+    const n = Number(out?.confidence);
+    return Number.isFinite(n) ? n : 0;
+}
 
 const runsStageSchema = (description: string) => ({
     type: 'object',
@@ -195,7 +220,7 @@ const runsStageSchema = (description: string) => ({
         },
         confidence: {type: 'integer', description: 'overall confidence 0-100'},
     },
-    required: ['runs', 'confidence'],
+    required: [],   // lenient - see textStageSchema's note; coerceRuns covers
 });
 
 /** Flatten tagged runs to plain text (the hand data is untagged - scoring
@@ -697,10 +722,10 @@ export async function transcribeEval(opts: TranscribeEvalOptions): Promise<void>
             const OUT_FIELD: Record<string, string> = {
                 transliterate: 'transliteration', 'source-as-entry': 'source_as_entry',
                 normalize: 'normalized_entry'};
-            const text = out?.runs !== undefined
-                ? runsToText(out.runs)
+            const text = (out?.runs !== undefined || OUT_FIELD[stage.name] === undefined)
+                ? runsToText(coerceRuns(out))
                 : String(out?.[OUT_FIELD[stage.name] ?? 'transliteration'] ?? '');
-            const confidence = Number(out?.confidence ?? 0);
+            const confidence = coerceConfidence(out);
             const hand = item.hand[field];
             const scored = hand !== undefined && hand.trim() !== '';
             const sim = scored ? similarity(text, hand!) : undefined;
@@ -717,7 +742,7 @@ export async function transcribeEval(opts: TranscribeEvalOptions): Promise<void>
                          differences: Array.isArray(j?.differences) ? j.differences : []};
             }
             stages[stage.name] = {text, confidence, sim, lenient, judge,
-                tagged: out?.runs !== undefined ? runsToTagged(out.runs) : undefined};
+                tagged: out?.runs !== undefined ? runsToTagged(coerceRuns(out)) : undefined};
             if(sim !== undefined) {
                 const s = sums[stage.name] ?? {sim: 0, lenient: 0, n: 0, conf: 0,
                                                equiv: 0, equivN: 0};

@@ -182,7 +182,7 @@ export function pdmSegmentStage(model: string): ExtractStage {
                 }, required: ['runs', 'kind']}},
                 confidence: {type: 'integer', description: 'overall confidence 0-100'},
             },
-            required: ['entries', 'confidence'],
+            required: [],   // lenient - consumers default entries/conf
         },
         prompt: (input: unknown) => {
             const {page, runCount} = input as {page: number, runCount: number};
@@ -289,7 +289,7 @@ export function pdmStartStage(model: string): ExtractStage {
                             description: 'runs that are page numbers, stamps, slips - not dictionary content'},
                 confidence: {type: 'integer'},
             },
-            required: ['starts', 'confidence'],
+            required: [],   // lenient - consumers default starts/conf
         },
         prompt: (input: unknown) => {
             const {page, runCount} = input as {page: number, runCount: number};

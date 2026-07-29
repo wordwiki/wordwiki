@@ -59,6 +59,7 @@ import * as transcribe from './transcribe.ts';
 import * as pageTranscribe from './page-transcribe.ts';
 import * as clarkImport from '../mikmaq/clark-import.ts';
 import * as pdmSegment from '../mikmaq/pdm-segment.ts';
+import * as pdmImport from '../mikmaq/pdm-import.ts';
 import { buildPublishSource, buildAllPublishSources, publishSourceFromJson, publishSourceToPublicJson, writeFullHistoryDump } from './publish-source.ts';
 
 export async function cliMain(args: string[]): Promise<void> {
@@ -1486,6 +1487,28 @@ export async function cliMain(args: string[]): Promise<void> {
             security.runSystem(() => {
                 ww.ensureNewStyleTables();
                 console.info(pdmSegment.ceilingSweep());
+            });
+            Deno.exit(0);
+            break;
+        }
+
+        // PDM IMPORT (mikmaq/pdm-import.ts): segment + read + land the
+        // Pacifique draft dictionary (Clark landing pattern; escalation
+        // policy per the measured arms).  Cached; re-runs cheap.
+        //   ./wordwiki.sh pdm-import [--pages=...] [--report=../pdm/import.md]
+        case 'pdm-import': {
+            const argOf = (name: string, dflt: string) =>
+                args.find(a => a.startsWith(`--${name}=`))?.slice(name.length + 3) ?? dflt;
+            const pagesArg = argOf('pages', '4,40,67,101,172,209,250,324,435,550');
+            const range = pagesArg.match(/^(\d+)-(\d+)$/);
+            const pages = range
+                ? Array.from({length: Number(range[2]) - Number(range[1]) + 1},
+                             (_, i) => Number(range[1]) + i)
+                : pagesArg.split(',').map(Number);
+            const reportPath = argOf('report', '../pdm/import.md');
+            await security.runSystem(async () => {
+                ww.ensureNewStyleTables();
+                await pdmImport.importPdm({pages, reportPath});
             });
             Deno.exit(0);
             break;
