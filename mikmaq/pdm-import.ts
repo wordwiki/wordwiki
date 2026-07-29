@@ -32,7 +32,7 @@ import * as dictionaryConfig from '../wordwiki/dictionary-config.ts';
 import { contentKeyId } from '../wordwiki/sfm-import.ts';
 import { selectScannedDocumentByFriendlyId, getOrCreateTaggingSheet } from '../wordwiki/scanned-document.ts';
 import { copyRefBoxToNewGroup, copyRefBoxToExistingGroup } from '../wordwiki/render-page-editor.ts';
-import { groupCropPath, groupCropImageSource, pdmRecipe, coerceRuns,
+import { groupCropPath, groupCropImageSource, pdmRecipe, wordSplitStage, coerceRuns,
          coerceConfidence } from '../wordwiki/transcribe.ts';
 import { llmRetry } from '../wordwiki/page-transcribe.ts';
 import { pdmPage, clusterRuns, annotatedPagePath, pdmSegmentStage, pdmStartStage,
@@ -164,8 +164,11 @@ async function segmentPage(cfg: ExtractConfig, pageNo: number):
 // ---------------------------------------------------------------------------------
 
 export interface RungResult { text: string; confidence: number; }
+export interface WordFact { source: string; normalized: string; gloss: string;
+                            confidence: number; }
 export interface EntryReading {
     rungs: Record<string, RungResult>;   // stage name -> result
+    words: WordFact[];                   // the word-split layer (family members)
     escalated: boolean;
 }
 
@@ -216,7 +219,22 @@ export async function readEntry(cfg: ExtractConfig, bounding_group_id: number):
     const rungs: Record<string, RungResult> = {};
     for(const [name, r] of Object.entries(chain))
         rungs[name] = {text: r.text, confidence: r.confidence};
-    return {rungs, escalated};
+    // The WORD-SPLIT layer (decision (a)'s secondary tagging): family
+    // members from the expanded transcription, strong model.
+    let words: WordFact[] = [];
+    try {
+        const ws = wordSplitStage();
+        ws.model = STRONG_MODEL;
+        const out: any = await llmRetry(() =>
+            extractStage(cfg, crop, 0, ws, chain['expand']?.out ?? chain['transcribe']?.out));
+        words = (out?.words ?? [])
+            .map((w: any) => ({source: String(w?.source ?? '').trim(),
+                               normalized: String(w?.normalized ?? '').trim(),
+                               gloss: String(w?.gloss ?? '').trim(),
+                               confidence: coerceConfidence(w)}))
+            .filter((w: WordFact) => w.source !== '' || w.normalized !== '');
+    } catch(_e) { /* fall back to the single-entry landing */ }
+    return {rungs, words, escalated};
 }
 
 // ---------------------------------------------------------------------------------
@@ -338,10 +356,19 @@ export async function importPdm(opts: PdmImportOpts): Promise<void> {
                   rse = reading.rungs['source-as-entry'], rne = reading.rungs['normalize'];
             const norm = splitEntryLine(rne?.text ?? rse?.text ?? '');
             const pmWord = splitEntryLine(rtr?.text ?? '').word;
-            if(norm.word === '' && pmWord === '') continue;
-            entries++;
+            // ONE ENTRY PER WORD (the secondary layer - dz's p250 case):
+            // the word-split facts; single block entry as the fallback.
+            const words: WordFact[] = reading.words.length > 0
+                ? reading.words
+                : (norm.word !== '' || pmWord !== '')
+                    ? [{source: pmWord, normalized: norm.word, gloss: norm.gloss,
+                        confidence: rne?.confidence ?? 0}]
+                    : [];
+            if(words.length === 0) continue;
             const canonical = `${pageNo}${rtr?.text ?? ''}`;
-            const entryId = claimId(contentKeyId(['pdm-ent', canonical]));
+            for(const [wi, word] of words.entries()) {
+            entries++;
+            const entryId = claimId(contentKeyId(['pdm-ent', canonical, wi, word.source]));
             let ordinal = 0;
             const lastKey = new Map<string, string>();
             const keyFor = (tag: string): string => {
@@ -370,12 +397,12 @@ export async function importPdm(opts: PdmImportOpts): Promise<void> {
                 } as Assertion);
                 return id;
             };
-            if(norm.word !== '')
-                emitAt(entryPath, 'spl', {attr1: norm.word, variant: 'mm-li'});
-            if(pmWord !== '' && pmWord !== norm.word)
-                emitAt(entryPath, 'spl', {attr1: pmWord, variant: 'mm-pm'});
-            if(norm.gloss !== '')
-                emitAt(entryPath, 'gls', {attr1: norm.gloss});
+            if(word.normalized !== '')
+                emitAt(entryPath, 'spl', {attr1: word.normalized, variant: 'mm-li'});
+            if(word.source !== '' && word.source !== word.normalized)
+                emitAt(entryPath, 'spl', {attr1: word.source, variant: 'mm-pm'});
+            if(word.gloss !== '')
+                emitAt(entryPath, 'gls', {attr1: word.gloss});
             const refId = emitAt(entryPath, 'ref', {attr1: gid});
             const refPath: [string, number][] = [...entryPath, ['ref', refId]];
             const rung = (tag: string, r: RungResult|undefined) => {
@@ -384,6 +411,7 @@ export async function importPdm(opts: PdmImportOpts): Promise<void> {
             };
             rung('rtr', rtr); rung('rex', rex); rung('rtl', rtl);
             rung('rse', rse); rung('rne', rne);
+            }
         }
     }
 

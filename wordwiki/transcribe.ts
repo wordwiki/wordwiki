@@ -413,6 +413,61 @@ function normalizeStage(): ExtractStage {
     };
 }
 
+export const PROMPT_VERSION_WORD_SPLIT = 1;
+
+/** The WORD-SPLIT stage (the secondary layer of decision (a)): from one
+ *  VISUAL entry's expanded transcription, enumerate the individual
+ *  Mi'gmaq WORDS of the family - the headword plus every elided-stem
+ *  form the expand stage restored, plus paradigm-column forms - each
+ *  with its modern Listuguj form and English gloss.  This reproduces
+ *  per-word granularity (what the hand taggers drew) at the point where
+ *  the READING is available.  Not part of pdmRecipe: the eval gold is
+ *  per-hand-group; this stage serves the import path. */
+export function wordSplitStage(): ExtractStage {
+    return {
+        name: 'word-split', model: '', promptVersion: PROMPT_VERSION_WORD_SPLIT,
+        imageBox: 1600,
+        schema: {
+            type: 'object',
+            properties: {
+                words: {type: 'array', items: {type: 'object', properties: {
+                    source: {type: 'string',
+                             description: "the word in Pacifique's orthography, elision EXPANDED (full form)"},
+                    normalized: {type: 'string',
+                                 description: 'the modern Listuguj citation form'},
+                    gloss: {type: 'string',
+                            description: 'concise English gloss for THIS form'},
+                    confidence: {type: 'integer'},
+                }, required: []}},
+                confidence: {type: 'integer'},
+            },
+            required: [],
+        },
+        prompt: (input: any) => block`
+/**/Below is the expanded transcription of ONE entry from Father
+/**/Pacifique's Mi'gmaq-French dictionary (language-tagged runs; elided
+/**/stems already restored).  The entry is usually a WORD FAMILY: a
+/**/headword plus related forms (Pacifique writes the shared stem once),
+/**/sometimes with columns of inflected paradigm forms.
+/**/
+/**/Enumerate EVERY individual Mi'gmaq word of the entry - the headword
+/**/first, then each family/paradigm form - one object per word:
+/**/- "source": the word in Pacifique's orthography, FULL form (elision
+/**/  expanded);
+/**/- "normalized": the modern Listuguj citation form of that word;
+/**/- "gloss": a concise English gloss for that specific form (inherit
+/**/  and adapt the entry's gloss when the form differs only by
+/**/  inflection);
+/**/- "confidence": 0-100 for that word.
+/**/Do not invent words that are not in the entry; French text and
+/**/citations are never words.
+/**/${CONFIDENCE_RULES}
+/**/
+/**/Expanded transcription (tagged runs):
+/**/${runsToTagged(coerceRuns(input))}`,
+    };
+}
+
 export function pdmRecipe(): ExtractRecipe {
     return [transcribeStage(), expandStage(), transliterateStage(),
             sourceAsEntryStage(), normalizeStage()];
