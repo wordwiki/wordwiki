@@ -40,3 +40,12 @@
 # from the db (export-transliteration-pairs) / by the harness on demand.
 /transliteration-pairs*.json
 /*-baseline.json
+
+# Personal fetch tooling (browser bridge + Sci-Hub/Crossref) + its handoff
+# doc. NOT project code; Sci-Hub mirrors don't belong in a published repo.
+/stealth_fetch.js
+/paperhub.py
+/FETCH-INSTRUCTIONS.md
+/drive.js
+/scihub.js
+/mikmaq-fetch-results/
