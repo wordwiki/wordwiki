@@ -169,6 +169,46 @@ only exemplar); try session puppeteer MCP first.  (3) BAnQ item pages
 historiques) and 3216687/8 (Pacifique ms dictionary vols).  (4) Cyr on
 academia.edu; Fidelholtz 1976 (probably genuinely undigitized — ILL).
 
+## 6b. Hardening phase — IN PROGRESS (started 2026-07-29)
+
+Grounding read done: the harness (transliterate-harness.ts) already has
+the deterministic hash-fold holdout split, error clustering, baseline
+diff, and a clean runHarness() core callable on JSON.  So hardening is
+gap-closing, not a rebuild.  Increments, in build order:
+
+- **[DONE 2026-07-29] I1 — first-class composition.**  Built:
+  `composition?: string[]` on TransliterationPairSpec;
+  composedTransliterator(ids) (lazy lane-abutment check, throws on gap /
+  unknown id; pos passed to first step only), roundTripTransliterator(id)
+  (looks up the inverse by lane; undefined if absent), and
+  validateCompositions() (endpoint + abutment check, called at the binary
+  edge).  Harness: a composition pair is scored direct-vs-composed on one
+  oracle by default; new `--roundtrip` runs the A->B->A consistency audit
+  (roundTripAudit(), no target column).  wsf-mmli declares
+  ['wsf-wli','wli-mmli'].  Tests: wordwiki/transliterate-pair_test.ts
+  (chaining, gap/endpoint throws, round trip) — 4 pass; harness group 16
+  pass; all typecheck.
+  MEASURED VALIDATION: wsf-mmli direct 99/140 (70.7%) holdout ==
+  composed wsf-wli->wli-mmli 99/140 (70.7%) EXACTLY — the declarative
+  chain reproduces the hand-written transliterateWsfToMmli (mechanism
+  self-check).  Round trip on wsf-wli (inverse wli-wsf registered):
+  837/899 (93.1%) stable; the 62 lossy cases are exactly the aqn<->aqan
+  echo vowel (elukaqnatk->elukaqanatk) and initial-cluster u-prothesis
+  (wtikmatimkewey->uktikmatimkewey) — a real worklist for FREE, no gold.
+  NEXT within I1 (optional): once composed==direct is trusted, simplify
+  watson-transliterate.ts's hand-chained transliterateWsfToMmli to
+  `composedTransliterator([...])` (or leave as the readable reference).
+- **I2 — one engine face per pair.**  Fold the li-sf legacy specials in
+  the harness (default pairsPath, --calibrate reaching into
+  transliterate.ts, the reports.corpusPairs() extractor) behind the
+  registry so every pair is driven identically.
+- **I3 — standard provenance.**  Stamp each harness run with corpus id,
+  holdout size, pair+engine versions so pair numbers are comparable and
+  reproducible; surface it in the run report.
+- **I4 — explain-plan trace** as a first-class spec output (forces
+  rules-as-data); then **I5 — rules-as-data migration** (benchmark
+  li-sf v4).  I4/I5 are the larger back half; I1-I3 first.
+
 ## 7. Proposed phase order (standing proposal, not yet approved as a plan)
 
 1. Harness/registry hardening: one path per pair, standard holdouts,

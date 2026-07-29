@@ -7,9 +7,15 @@
  *   deno run --allow-all wordwiki/transliterate-harness.ts \
  *        [pairs.json] [--pair ID] [--candidate NAME] [--holdout] [--all] \
  *        [--write-baseline path] [--baseline path] [--clusters N] \
+ *        [--roundtrip]     # A->B->A consistency audit (needs the inverse
+ *                          # pair registered); no target column used
  *        [--calibrate]     # (li-sf only) regenerate transliterate-calibration.ts:
  *                          # per-risk-band MEASURED accuracy on the train
  *                          # folds, validated on the holdout
+ *
+ * A pair that declares a `composition` (transliterate-pair.ts) is scored
+ * direct-vs-composed on the same oracle by default - the hub-vs-direct
+ * measurement, formerly a hand-written candidate.
  *
  * The loop: edit the pair's rules → run the harness → read
  *   1. the SCORE (exact matches; near-misses = edit distance 1 shown too),
@@ -31,7 +37,8 @@
 import { transliterateLiToSf, transliterateCandidates, transliterationRiskMarkers,
          TRANSLITERATOR_VERSION } from './transliterate.ts';
 import { type CorpusPair, normalizeCorpusPair,
-         transliterationPair, transliterationPairIds } from './transliterate-pair.ts';
+         transliterationPair, transliterationPairIds, validateCompositions,
+         composedTransliterator, roundTripTransliterator } from './transliterate-pair.ts';
 
 // --- tiny edit-script diff (short strings; classic DP) -----------------------
 
@@ -206,11 +213,44 @@ export function runHarness(rawPairs: unknown[], candidates: HarnessCandidate[],
     return runs;
 }
 
+// --- round-trip consistency audit (A -> B -> A; no gold needed) -----------------
+
+export interface RoundTripAudit {
+    n: number;
+    stable: number;                    // returned unchanged by A->B->A
+    examples: {word: string, got: string}[];   // the lossy ones
+    lines: string[];
+}
+
+/** How much of an oracle's SOURCE side survives A->B->A unchanged.  A
+ *  consistency signal that needs no target column: a low stable rate means
+ *  the pair (or its inverse) is lossy at those sites - the mismatches are
+ *  a worklist that costs nothing to produce. */
+export function roundTripAudit(sources: string[],
+        rt: (word: string) => string): RoundTripAudit {
+    const seen = new Set<string>();
+    let stable = 0, n = 0;
+    const examples: {word: string, got: string}[] = [];
+    for(const w of sources) {
+        if(seen.has(w)) continue;
+        seen.add(w); n++;
+        const got = rt(w);
+        if(got === w) stable++;
+        else if(examples.length < 20) examples.push({word: w, got});
+    }
+    const lines = [`\n=== round-trip A->B->A: ${stable}/${n} stable ` +
+                   `(${n ? (stable*100/n).toFixed(1) : '0'}%)`,
+                   `  lossy examples (source → round-tripped):`];
+    for(const e of examples) lines.push(`    ${e.word} → ${e.got}`);
+    return {n, stable, examples, lines};
+}
+
 // --- main -----------------------------------------------------------------------
 
 async function main() {
     // The BINARY EDGE: pull in the language package's pair registrations.
     await import('../mikmaq/register.ts');
+    validateCompositions();   // fail fast on a mis-declared composition
 
     const args = [...Deno.args];
     const flag = (name: string): boolean => {
@@ -222,6 +262,7 @@ async function main() {
     };
     const holdout = flag('--holdout');
     const all = flag('--all');
+    const roundtripFlag = flag('--roundtrip');
     const pairId = opt('--pair') ?? 'li-sf';
     const candidateName = opt('--candidate');
     const writeBaseline = opt('--write-baseline');
@@ -245,11 +286,29 @@ async function main() {
         return;
     }
 
+    // Round-trip audit (A->B->A): a consistency check needing no target
+    // column, so it runs on the pair's own source side.
+    if(roundtripFlag) {
+        const rt = roundTripTransliterator(pairId);
+        if(!rt) throw new Error(`no round trip for '${pairId}': the inverse `+
+            `pair (${spec.targetLane}->${spec.sourceLane}) is not registered`);
+        const {pairs: split} = splitPairs(allPairs, all ? 'all' : holdout ? 'holdout' : 'train');
+        for(const line of roundTripAudit(split.map(p => p.source), rt).lines)
+            console.log(line);
+        return;
+    }
+
     const available: HarnessCandidate[] = spec.candidateTransliterators
         ?? [{name: `${spec.id} ${spec.version}`, fn: (w, o) => spec.transliterate(w, o)}];
+    // A composition pair auto-compares its direct rules against the composed
+    // chain on the SAME oracle (the hub-vs-direct measurement, was by hand).
+    const composed: HarnessCandidate | undefined = spec.composition
+        ? {name: `composed: ${spec.composition.join(' -> ')}`,
+           fn: composedTransliterator(spec.composition)}
+        : undefined;
     const candidates = candidateName
-        ? available.filter(c => c.name.includes(candidateName))
-        : [available[0]];
+        ? [...available, ...(composed ? [composed] : [])].filter(c => c.name.includes(candidateName))
+        : composed ? [available[0], composed] : [available[0]];
     if(candidates.length === 0) throw new Error(`no candidate matches '${candidateName}'`);
 
     const baseline = baselinePath

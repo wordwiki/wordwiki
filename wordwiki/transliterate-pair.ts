@@ -43,6 +43,15 @@ export interface TransliterationPairSpec {
      *  (e.g. a direct mapping vs a composition through another pair). */
     candidateTransliterators?: Array<{name: string,
         fn: (word: string, opts?: {pos?: string}) => string}>;
+    /** Declares this pair as a COMPOSITION of other registered pairs,
+     *  applied left-to-right (e.g. ['wsf-wli','wli-mmli'] for 'wsf-mmli').
+     *  The harness then runs the direct rules and the composed chain
+     *  side-by-side on one oracle, and (when the inverse pairs exist) an
+     *  A->B->A round-trip audit.  The chain's endpoints must equal this
+     *  pair's own sourceLane/targetLane; intermediate lanes must abut.
+     *  Validated lazily (composedTransliterator throws on a gap) so a
+     *  mis-declared composition fails loudly at first use. */
+    composition?: string[];
     /** Extract this pair's training corpus from the live db (the
      *  export-transliteration-pairs --pair=<id> path). */
     extractCorpus?(ww: WordWiki): {pairs: CorpusPair[], notes?: string[]};
@@ -65,4 +74,58 @@ export function transliterationPairFor(sourceLane: string, targetLane: string)
         : TransliterationPairSpec|undefined {
     return [...pairs.values()].find(p =>
         p.sourceLane === sourceLane && p.targetLane === targetLane);
+}
+
+/** Chain registered pairs left-to-right into one transliterator.  The
+ *  intermediate lanes must abut (each step's targetLane === the next
+ *  step's sourceLane); a gap throws so a mis-declared composition surfaces
+ *  at first use, not as silently-wrong output.  `pos` is a source-lane
+ *  property, so it is passed to the FIRST step only. */
+export function composedTransliterator(pairIds: string[])
+        : (word: string, opts?: {pos?: string}) => string {
+    if(pairIds.length === 0) throw new Error('empty composition');
+    const specs = pairIds.map(id => {
+        const s = pairs.get(id);
+        if(!s) throw new Error(
+            `composition references unknown pair '${id}' `+
+            `(registered: ${transliterationPairIds().join(', ')})`);
+        return s;
+    });
+    for(let i = 0; i + 1 < specs.length; i++)
+        if(specs[i].targetLane !== specs[i+1].sourceLane)
+            throw new Error(`composition lane gap: '${specs[i].id}' ends in `+
+                `lane '${specs[i].targetLane}' but '${specs[i+1].id}' starts `+
+                `in lane '${specs[i+1].sourceLane}'`);
+    return (word, opts) =>
+        specs.reduce((w, s, i) => s.transliterate(w, i === 0 ? opts : undefined), word);
+}
+
+/** A -> B -> A through the two registered directional pairs, when both
+ *  are registered (looks up the inverse by lane).  A pure CONSISTENCY
+ *  signal needing no gold: how much survives the round trip unchanged
+ *  measures how lossy the pair is.  Returns undefined if either direction
+ *  is missing. */
+export function roundTripTransliterator(pairId: string)
+        : ((word: string, opts?: {pos?: string}) => string) | undefined {
+    const fwd = pairs.get(pairId);
+    if(!fwd) return undefined;
+    const back = transliterationPairFor(fwd.targetLane, fwd.sourceLane);
+    if(!back) return undefined;
+    return (word, opts) => back.transliterate(fwd.transliterate(word, opts));
+}
+
+/** Eagerly validate every declared composition (endpoints match the
+ *  pair's own lanes; intermediate lanes abut).  A binary edge can call
+ *  this after all pairs register to fail fast on a bad declaration. */
+export function validateCompositions(): void {
+    for(const spec of pairs.values()) {
+        if(!spec.composition) continue;
+        composedTransliterator(spec.composition);   // throws on lane gap / unknown id
+        const chain = spec.composition.map(id => pairs.get(id)!);
+        const first = chain[0], last = chain[chain.length - 1];
+        if(first.sourceLane !== spec.sourceLane || last.targetLane !== spec.targetLane)
+            throw new Error(`composition endpoints for '${spec.id}' `+
+                `(${first.sourceLane}->${last.targetLane}) do not match its `+
+                `own lanes (${spec.sourceLane}->${spec.targetLane})`);
+    }
 }

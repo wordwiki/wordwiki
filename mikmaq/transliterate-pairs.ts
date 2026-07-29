@@ -175,6 +175,11 @@ export function registerMikmaqTransliterationPairs(): void {
         id: 'wsf-mmli', sourceLane: 'watson-sf', targetLane: 'mm-li',
         version: WSF_MMLI_VERSION,
         transliterate: transliterateWsfToMmli,
+        // wsf-mmli IS the hub composition wsf->wli->mmli (transliterateWsfToMmli
+        // hand-chains exactly these two); declaring it lets the harness score
+        // direct-vs-composed automatically - the composed candidate should
+        // REPRODUCE the current fn, which is the mechanism's own check.
+        composition: ['wsf-wli', 'wli-mmli'],
         candidatePattern: wsfMmliCandidatePattern,
         candidateTransliterators: [
             {name: `${WSF_MMLI_VERSION} (current)`, fn: transliterateWsfToMmli},
