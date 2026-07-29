@@ -323,13 +323,18 @@ export async function importPdm(opts: PdmImportOpts): Promise<void> {
         log(`p${pageNo}: ${seg.entries.length} entries${seg.fallback ? ' (starts fallback)' : ''}`);
         // Groups first (cheap, sequential), then read entries in a small
         // parallel pool.
-        const groups: {gid: number, e: SegmentedEntry}[] = [];
+        // One group per WORD-ENTRY, not per block (the hand model: each
+        // word draws its OWN group over the shared ink - overlapping
+        // groups, strict 1-1 group<->ref; dz 2026-07-29).  The block's
+        // group is made first (the reading needs a crop NOW); per-word
+        // twins are copied at landing time below.
+        const groups: {gid: number, boxIds: number[], e: SegmentedEntry}[] = [];
         for(const e of seg.entries) {
             const boxIds = e.runIds.flatMap(ri => seg.runs[ri].words.map(w => w.id));
             if(boxIds.length === 0) continue;
             const {bounding_group_id} = copyRefBoxToNewGroup(boxIds[0], layerId, 'blue');
             for(const b of boxIds.slice(1)) copyRefBoxToExistingGroup(bounding_group_id, b);
-            groups.push({gid: bounding_group_id, e});
+            groups.push({gid: bounding_group_id, boxIds, e});
         }
         const readings: (EntryReading|undefined)[] = new Array(groups.length);
         let cursor = 0;
@@ -366,8 +371,17 @@ export async function importPdm(opts: PdmImportOpts): Promise<void> {
                     : [];
             if(words.length === 0) continue;
             const canonical = `${pageNo}${rtr?.text ?? ''}`;
+            const {boxIds} = groups[i];
             for(const [wi, word] of words.entries()) {
             entries++;
+            // The first word keeps the block's group; each further word
+            // gets its OWN overlapping twin (same boxes copied).
+            let wordGid = gid;
+            if(wi > 0 && boxIds.length > 0) {
+                const g2 = copyRefBoxToNewGroup(boxIds[0], layerId, 'blue');
+                for(const b of boxIds.slice(1)) copyRefBoxToExistingGroup(g2.bounding_group_id, b);
+                wordGid = g2.bounding_group_id;
+            }
             const entryId = claimId(contentKeyId(['pdm-ent', canonical, wi, word.source]));
             let ordinal = 0;
             const lastKey = new Map<string, string>();
@@ -403,7 +417,7 @@ export async function importPdm(opts: PdmImportOpts): Promise<void> {
                 emitAt(entryPath, 'spl', {attr1: word.source, variant: 'mm-pm'});
             if(word.gloss !== '')
                 emitAt(entryPath, 'gls', {attr1: word.gloss});
-            const refId = emitAt(entryPath, 'ref', {attr1: gid});
+            const refId = emitAt(entryPath, 'ref', {attr1: wordGid});
             const refPath: [string, number][] = [...entryPath, ['ref', refId]];
             const rung = (tag: string, r: RungResult|undefined) => {
                 if(r && r.text.trim() !== '')

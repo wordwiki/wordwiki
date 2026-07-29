@@ -1,4 +1,4 @@
-# PDM import (generation 4)
+# PDM import (generation 5)
 
 Pages 4, 40, 67, 101, 172, 209, 250, 324, 435, 550; segment claude-opus-4-8; letters claude-sonnet-5 with whole-ref escalation to claude-opus-4-8 below c42; structuring claude-opus-4-8.
 
@@ -8,4 +8,3 @@ Pages 4, 40, 67, 101, 172, 209, 250, 324, 435, 550; segment claude-opus-4-8; let
 
 ## Usage (actual API spend this run; cache hits free)
 
-- word-split: 304 calls, 425808 in / 53150 out

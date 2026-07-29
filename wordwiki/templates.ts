@@ -393,6 +393,14 @@ function dictionaryHomeUrl(table: string): string {
     return table === 'dict' ? '/ww/' : `/ww/wordwiki.dicts.${table}.home()`;
 }
 
+/** A reference-book page-editor URL in the given dictionary's context
+ *  (the default dictionary keeps the historical short URL). */
+function bookPageEditorUrl(book: string, dict: string): string {
+    return dict === 'dict'
+        ? `/ww/wordwiki.pages.pageEditor(${JSON.stringify(book)})`
+        : `/ww/wordwiki.pages.pageEditor(${JSON.stringify(book)}, 1, 'Text', ${JSON.stringify(dict)})`;
+}
+
 function dictionaryBadgeSwitcher(active: string,
                                  choices: {table: string, label: string}[]): any {
     const current = choices.find(c => c.table === active) ?? choices[0];
@@ -400,7 +408,8 @@ function dictionaryBadgeSwitcher(active: string,
         ['a', {class: 'dropdown-toggle text-light text-decoration-none', href: '#',
                role: 'button', 'data-bs-toggle': 'dropdown', 'aria-expanded': 'false',
                title: 'Active dictionary — click to change'},
-         ['span', {class: 'badge text-bg-info', id: 'lm-dict-badge'}, current.label]],
+         ['span', {class: 'badge text-bg-info', id: 'lm-dict-badge',
+                   'data-dict-active': active}, current.label]],
         ['ul', {class: 'dropdown-menu'},
          ['li', {}, ['h6', {class: 'dropdown-header'}, 'Active dictionary']],
          // Plain hrefs ON PURPOSE: a full page load re-renders the navbar
@@ -421,15 +430,30 @@ function dictionaryNavScript(choices: {table: string, label: string}[]): any {
 /**/    window.__lmDictNavHook = true;
 /**/    const labels = ${JSON.stringify(labels)};
 /**/    function sync() {
-/**/      const m = location.pathname.match(/wordwiki\\.dicts\\.([A-Za-z0-9_]+)\\./);
-/**/      const active = (m && labels[m[1]] !== undefined) ? m[1] : 'dict';
+/**/      const path = decodeURIComponent(location.pathname);
+/**/      // The URL carries the dictionary in the dicts.X namespace and in
+/**/      // the page editor's dictionary ARGUMENT; for every OTHER page
+/**/      // (page jumper fragments, reports...) trust the SERVER-rendered
+/**/      // badge - full loads always re-derive it, so it is the last
+/**/      // authoritative context, never an independent store.
 /**/      const badge = document.getElementById('lm-dict-badge');
+/**/      const m = path.match(/wordwiki\\.dicts\\.([A-Za-z0-9_]+)\\./)
+/**/          || path.match(/wordwiki\\.pages\\.pageEditor\\([^)]*,\\s*['"]([A-Za-z0-9_]+)['"]\\s*\\)/);
+/**/      const active = (m && labels[m[1]] !== undefined) ? m[1]
+/**/          : (badge && labels[badge.getAttribute('data-dict-active')] !== undefined)
+/**/              ? badge.getAttribute('data-dict-active') : 'dict';
 /**/      if(badge) badge.textContent = labels[active] ?? active;
 /**/      for(const el of document.querySelectorAll('[data-dict-link]')) {
 /**/        const kind = el.getAttribute('data-dict-link');
 /**/        el.href = kind === 'browse'
 /**/            ? '/ww/wordwiki.dicts.' + active + '.home()'
 /**/            : '/ww/wordwiki.dicts.' + active + '.search(%22%22)';
+/**/      }
+/**/      for(const el of document.querySelectorAll('[data-dict-book]')) {
+/**/        const book = JSON.stringify(el.getAttribute('data-dict-book'));
+/**/        el.href = active === 'dict'
+/**/            ? '/ww/wordwiki.pages.pageEditor(' + book + ')'
+/**/            : '/ww/wordwiki.pages.pageEditor(' + book + ", 1, 'Text', '" + active + "')";
 /**/      }
 /**/      for(const el of document.querySelectorAll('[data-dict-only]'))
 /**/        el.style.display =
@@ -478,16 +502,18 @@ export function navBar(showTestClientLink: boolean = defaultShowTestClientLink,
              ['a', {class:'nav-link', 'data-dict-link':'search',
                     href:`/ww/wordwiki.dicts.${activeDictionary}.search("")`}, 'Search']],
 
-            // --- Reference Books
+            // --- Reference Books.  The links FOLLOW the active
+            //     dictionary (dz 2026-07-28: opening a book page from the
+            //     pdm context must open the pdm tagging sheet - side-by-
+            //     side comparison windows depend on it).  The nav hook
+            //     rewrites data-dict-book hrefs after swaps.
             ['li', {class:'nav-item dropdown'},
              ['a', {class:'nav-link dropdown-toggle', href:'#', role:'button', 'data-bs-toggle':'dropdown', 'aria-expanded':'false'},
               'Reference Books'],
              ['ul', {class:'dropdown-menu'},
-              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.pages.pageEditor("PDM")'}, 'PDM']],
-              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.pages.pageEditor("Rand")'}, 'Rand']],
-              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.pages.pageEditor("Clark")'}, 'Clark']],
-              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.pages.pageEditor("PacifiquesGeography")'}, 'PacifiquesGeography']],
-              ['li', {}, ['a', {class:'dropdown-item', href:'/ww/wordwiki.pages.pageEditor("RandFirstReadingBook")'}, 'RandFirstReadingBook']],
+              ['PDM', 'Rand', 'Clark', 'PacifiquesGeography', 'RandFirstReadingBook'].map(book =>
+                ['li', {}, ['a', {class:'dropdown-item', 'data-dict-book': book,
+                                  href: bookPageEditorUrl(book, activeDictionary)}, book]]),
              ]],
 
             // (The old data-driven 'Dictionaries' dropdown is superseded by
@@ -612,7 +638,7 @@ export function pageTemplate(content: PageContent): any {
 
          ['body', {},
 
-          navBar(),
+          navBar(content.showTestClientLink, content.dictionary),
 
           // TODO probably move this somewhere else
           ['audio', {id:'audioPlayer', preload:'none'},

@@ -211,7 +211,11 @@ export function renderPageEditor(cfg: PageEditorConfig, page_id: number): templa
 
     //console.info('PAGE BODY', JSON.stringify(body, undefined, 2));
     // The scanned-page image + bounding boxes need the full viewport width.
-    return {title, head, body, fullBleed: true};
+    // The page's DICTIONARY context rides the sheet (dz 2026-07-29: the
+    // navbar must not reset to MMO when a pdm scan link or a pdm-context
+    // Reference Books link opens the editor).
+    return {title, head, body, fullBleed: true,
+            dictionary: layerDictionary(cfg.layer_id)};
 }
 
 // --------------------------------------------------------------------------------
@@ -429,7 +433,11 @@ export function renderPageViewer(cfg: PageViewerConfig, page_id: number, pageJum
 
     //console.info('PAGE BODY', JSON.stringify(body, undefined, 2));
     // The scanned-page image + bounding boxes need the full viewport width.
-    return {title, head, body, fullBleed: true};
+    // The page's DICTIONARY context rides the sheet (dz 2026-07-29: the
+    // navbar must not reset to MMO when a pdm scan link or a pdm-context
+    // Reference Books link opens the editor).
+    return {title, head, body, fullBleed: true,
+            dictionary: layerDictionary(cfg.layer_id)};
 }
 
 /**
@@ -986,7 +994,15 @@ export function pageEditorURLForBoundingGroup(bounding_group_id: number): string
         : schema.selectScannedPageByPageNumber().required({document_id, page_number: 1}).page_id;
     const document = schema.selectScannedDocument().required({document_id});
     const page = schema.selectScannedPage().required({page_id});
-    return `/ww/wordwiki.pages.pageEditor(${JSON.stringify(document.friendly_document_id)}, ${page.page_number})`;
+    // STAY ON THE GROUP'S SHEET (dz 2026-07-28): a scan link from a pdm
+    // word must open the pdm tagging sheet, not MMO's - the group's layer
+    // carries the dictionary.  Default-dictionary groups keep the
+    // historical short URL.
+    const dict = layerDictionary(bounding_group.layer_id);
+    return dict === 'dict'
+        ? `/ww/wordwiki.pages.pageEditor(${JSON.stringify(document.friendly_document_id)}, ${page.page_number})`
+        : `/ww/wordwiki.pages.pageEditor(${JSON.stringify(document.friendly_document_id)}, ` +
+          `${page.page_number}, 'Text', ${JSON.stringify(dict)})`;
 }
 
 export function singlePublicBoundingGroupEditorURL(rootPath: string,
