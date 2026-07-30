@@ -24,6 +24,7 @@ import { registerTransliterationPair, type CorpusPair } from '../wordwiki/transl
 import { transliterateLiToSf, transliterateCandidates,
          CANDIDATE_TRANSLITERATORS, TRANSLITERATOR_VERSION } from '../wordwiki/transliterate.ts';
 import { PM_LI_VERSION, transliteratePmToLi, pmLiCandidates, pmLiPattern } from './pacifique-transliterate.ts';
+import { calibrateLiSf } from '../wordwiki/transliterate-calibrate.ts';
 import { transliterateWsfToWli, wsfWliCandidates, wsfWliCandidatePattern,
          wliMmliCandidatePattern, wsfMmliCandidatePattern,
          transliterateWliToMmli,
@@ -139,6 +140,10 @@ export function registerMikmaqTransliterationPairs(): void {
             // justify, nothing more (watson-transliterate.ts).
             {name: `${LISF_VIA_WATSON_VERSION} (hub audit)`,
              fn: transliterateLiToSfViaWatson}],
+        // The historical bare oracle filename, and the calibration hook
+        // (the only pair with one) - both DATA now, not harness id-branches.
+        corpusPath: 'transliteration-pairs.json',
+        calibrate: calibrateLiSf,
         // The existing export path (cli export-transliteration-pairs with
         // no --pair) keeps its bespoke junk filter; this extractor is the
         // registry face of the same corpus.

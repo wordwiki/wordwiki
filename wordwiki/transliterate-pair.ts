@@ -55,6 +55,17 @@ export interface TransliterationPairSpec {
     /** Extract this pair's training corpus from the live db (the
      *  export-transliteration-pairs --pair=<id> path). */
     extractCorpus?(ww: WordWiki): {pairs: CorpusPair[], notes?: string[]};
+    /** Where the harness reads this pair's oracle JSON when no path is
+     *  given.  Defaults to `transliteration-pairs-<id>.json`; li-sf keeps
+     *  its historical bare `transliteration-pairs.json`.  Data, not an
+     *  `id==='li-sf'` branch in the harness. */
+    corpusPath?: string;
+    /** Optional per-pair calibration (`--calibrate`): regenerate whatever
+     *  risk/branch tables the pair's engine reads, MEASURED on the oracle.
+     *  Only li-sf has one today (its markers/branches live in
+     *  transliterate.ts); the harness just calls the hook or errors if a
+     *  pair has none - no engine-specific code in the harness. */
+    calibrate?(pairs: CorpusPair[]): void;
 }
 
 const pairs = new Map<string, TransliterationPairSpec>();

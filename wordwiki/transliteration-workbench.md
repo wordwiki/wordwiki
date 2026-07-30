@@ -198,10 +198,26 @@ gap-closing, not a rebuild.  Increments, in build order:
   NEXT within I1 (optional): once composed==direct is trusted, simplify
   watson-transliterate.ts's hand-chained transliterateWsfToMmli to
   `composedTransliterator([...])` (or leave as the readable reference).
-- **I2 — one engine face per pair.**  Fold the li-sf legacy specials in
-  the harness (default pairsPath, --calibrate reaching into
-  transliterate.ts, the reports.corpusPairs() extractor) behind the
-  registry so every pair is driven identically.
+- **[DONE 2026-07-29] I2 — one engine face per pair (harness).**  The
+  harness is now pair-AGNOSTIC: zero li-sf engine imports.  Folded:
+  (a) default oracle path = `spec.corpusPath` field (li-sf keeps the bare
+  `transliteration-pairs.json`); no more `id==='li-sf'` path branch.
+  (b) --calibrate = `spec.calibrate?(pairs)` hook; the ~110-line li-sf
+  calibrate() MOVED to wordwiki/transliterate-calibrate.ts (imports
+  splitPairs from the harness — one-way, no cycle), registered as the
+  li-sf pair's hook.  Harness just calls the hook or errors if a pair has
+  none.  Verified behavior-preserving: --calibrate through the hook writes
+  a table identical to committed except the version DATE stamp (same
+  rules-v4/1233pairs; top-1 75.5%, top-5 84.4%); li-sf default-path run
+  scores the known 75.5% holdout.  30 transliterate tests pass; all
+  typecheck.
+  DEFERRED (I2b, separable — changes export behavior): the cli.ts
+  export-transliteration-pairs path still has an li-sf special (the
+  pairJunkReason filter + exclusion-naming runs ONLY on the no-`--pair`
+  branch; li-sf's extractCorpus returns UNFILTERED).  Converging them
+  (move the junk filter into li-sf's extractCorpus so `--pair=li-sf` ==
+  default) is a real output change → its own increment with its own
+  verification, not folded silently here.
 - **I3 — standard provenance.**  Stamp each harness run with corpus id,
   holdout size, pair+engine versions so pair numbers are comparable and
   reproducible; surface it in the run report.
