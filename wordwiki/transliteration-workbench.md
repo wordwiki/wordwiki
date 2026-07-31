@@ -7,6 +7,10 @@ taxonomy (not started); the rest is proposal.  Companions:
   from the scans + the web research pass).  Read together with this doc.
 - transliteration-findings.md — the measured rules work to date (Parts
   1-4; pm-li phonology is Part 4).
+- phonology-reference.md — the Mi'kmaq phonology rule inventory (read
+  2026-07-31: wiki.migmaq.org + Fidelholtz/Olson/Steeves/Hewson), each
+  rule mapped to a pair/cluster; §4 = the THREE-LEVER verdict (match
+  permissiveness > morphological normalization > phonetic scoring).
 - memory/machine-contributors-design.md + wordwiki/machine-contributors-design.md
   — the machine-owned-facts model that materialization lands on.
 - mikmaq/transliterate-pairs.ts — the six registered pairs today
