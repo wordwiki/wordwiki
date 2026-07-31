@@ -1,7 +1,8 @@
 # Transliteration workbench — the research/translit/compare/materialize push
 
-Working doc, started 2026-07-29.  Status: PROPOSAL/DESIGN (dz + claude
-conversation distillate); nothing built yet.  Companions:
+Working doc, started 2026-07-29.  Status: hardening phase I1-I5 BUILT &
+LANDED (§6b); §8 branch-engine + phonetics = DESIGN, gated on the pm-li
+taxonomy (not started); the rest is proposal.  Companions:
 - orthography-sources.md — the source inventory (in-project keys captured
   from the scans + the web research pass).  Read together with this doc.
 - transliteration-findings.md — the measured rules work to date (Parts
@@ -307,3 +308,94 @@ gap-closing, not a rebuild.  Increments, in build order:
    once 1 gives traces and 4 gives materialized rows to review.
 6. Published rule pages fall out of 1's rules-as-data + the publish
    model.
+
+## 8. Branch-aware rules engine + phonetics slot (design assessment 2026-07-31)
+
+dz's question after I5: extend the rules engine to handle BRANCHES natively
+(with explain)?  Branches raise quality AND express ambiguity to a language
+editor in a far more actionable form than a bare probability.  And this is
+the on-ramp for language KNOWLEDGE (phonetics) in the model.  Plus a
+serialization concern for the SAAS future.  My assessment (recorded before
+the phonetics reading, which is large and may push this out of context):
+
+### 8.1 How hard are native branches?  MEDIUM, not hard.
+li-sf already implements every hard part: branchSites (find), branchP
+(score from BRANCH_PROBABILITIES), transliterateCandidates (enumerate +
+rank by product-of-scores), and I5's explainLiToSf already reconstructs the
+per-decision trace with alternative + probability.  Generalizing is MOVING
+that behind an abstraction, not inventing it.  Explain is nearly free - the
+trace already carries {alternative, probability}; it widens to
+alternatives[].  Shape: a `branchRule` kind that compileRules drives three
+ways - argmax (deterministic output), enumerate (candidates), record
+(explain) - plus a faithful li-sf migration by the I5 reconstruct+assert
+method.  ~day-ish increment, real-but-manageable production risk.
+
+### 8.2 The real architecture: match / produce / score (dz's decomposition)
+A rule today is a monolithic `apply: word->word` CLOSURE.  Decompose into:
+- MATCH: where does it fire (sites + context key)?
+- PRODUCE: the alternatives at a site (deterministic = 1; branch = N).
+- SCORE: how good is each alternative (deterministic = 1.0; branch = a
+  probability / model output)?
+Then a deterministic rule = "1 alternative, score 1" and a branch = "N
+alternatives, scored" - BRANCHES FALL OUT FOR FREE.  This subsumes 8.1 and
+lands dz's other two concerns:
+- SERIALIZATION (SAAS): match -> a declarative pattern (not a RegExp
+  closure); produce -> a NAMED OP + params (insert-char "'", map-lookup
+  LEXICAL_EXCEPTIONS); score -> a NAMED SCORER + table/param ref.  The
+  closures - including the regex REPLACEMENT closure - dissolve into DATA,
+  except a small registry of named escape-hatch ops (which IS the SAAS-safe
+  boundary: tenants REFERENCE registered ops, never inject code).  [[wordwiki-saas-goal]]
+- PHONETICS: the SCORE is the slot.  Today li-sf's "p=0.57" is a COUNTED
+  probability; a phonetically-informed score consults feature tables
+  (coronal-sonorant+coronal-obstruent favors epenthesis; k->q backs after
+  /a/,/o/; labialization after /u/ - the wiki.migmaq rules in
+  orthography-sources.md).  "adding language knowledge" = making the score
+  phonological, not baked into a number.
+
+### 8.3 Why branches beat a bare probability (affirm dz)
+"p=0.57" says WE'RE UNSURE; "wel'taq vs weltaq - is there a schwa here?" is a
+concrete, answerable question in the editor's domain.  Better for the
+FEEDBACK LOOP too: a verdict on a branch decision is a labeled training
+signal for THAT branch's score, not a whole-word correction - exactly the
+instance-verdict->trace join the review workflow (§3) wants.
+
+### 8.4 The pushback: phonetics must DRIVE the score design, not follow it
+All the payoff concentrates in the SCORE, and evidence that phonetics
+improves it is MIXED: pm-li phonology-in-prompt was FLAT (58.8 vs 60.3,
+findings Part 4); li-sf's own doc says its char-rule ceiling needs
+MORPHOLOGY/syllable features, not just phonetics.  Designing the score
+abstraction now = overfitting to li-sf's 3 hardcoded branch kinds without
+knowing whether phonetic scoring pays or what shape its inputs take.  So
+let the phonetics experiment fix the score signature against a REAL rule.
+
+### 8.5 Recommended sequence (gated, cheap-first)
+1. **pm-li error taxonomy** (already the planned next step; now sharper
+   with --explain showing which rule made each miss).  Hand-cleaned ~100-
+   pair holdout -> bucket misses: phonology-recoverable / morphological-
+   normalization / irreducible.  Cheap, no engine change, DECISIVE: tells
+   us if phonetic branches have demand + what the score needs as input.
+   BLOCKER: the hand-cleaned holdout needs a READING of the gold (French +
+   Mi'gmaq) - dz/team eyes; claude can prep everything around it.
+2. **If the phonological bucket is real: ONE hand-built phonetic branch**
+   (e.g. k->q backing) as a (match, produce, score) triple, measured on
+   the holdout vs the corpus-counted probability.  Small, contained, fixes
+   the score signature.
+3. **branchRule in the engine (Tier 1)**: native branches, argmax/
+   enumerate/explain unified, li-sf's branches migrated FAITHFULLY (I5
+   method), score PLUGGABLE.  Retires the parallel bespoke path.  Design
+   serialization-friendly from day one (table-ref + key-template as DATA,
+   not a closure) so we don't paint into a corner.
+4. **Full match/produce/score + named-op registry (Tier 2)**: the
+   serialization payoff.  Bigger; DEFER until SAAS or a second consumer
+   makes it concrete.
+
+### 8.6 Guardrail (carries from I4/I5)
+The legibility test applies to the ENGINE too.  The regexes are genuinely
+readable now; the decomposition must EARN its complexity by enabling what
+closures can't (serialization + phonetic scoring + richer branches).  If a
+phonetic rule as (match, produce, score) data isn't clearly readable by a
+linguist, the abstraction failed - keep the regex.  Also recall the li-sf
+HYBRID finding (§6b I5): li-sf's branch engine is inherently probabilistic;
+its published page is a deterministic table + a branch-site table with
+measured probabilities, NOT a flat regex list - and that's honest, the
+probabilities ARE the interesting content.
