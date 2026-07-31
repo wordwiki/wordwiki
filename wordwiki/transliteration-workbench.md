@@ -399,3 +399,71 @@ HYBRID finding (§6b I5): li-sf's branch engine is inherently probabilistic;
 its published page is a deterministic table + a branch-site table with
 measured probabilities, NOT a flat regex list - and that's honest, the
 probabilities ARE the interesting content.
+
+## 9. Matching as a first-class driver (design assessment 2026-07-31)
+
+dz, before phonetics: transliteration and MATCH are two related processes
+driven by mostly the SAME rules - but match is NOT "transliterate and see
+if the text matches".  In our samples we do a lot better when the engine
+KNOWS it is attempting a match.  My assessment (record alongside §8; the
+phonetics reading is large):
+
+### 9.1 The asymmetry: generation vs decision
+- TRANSLITERATION = generation: one input, must COMMIT at every branch;
+  ambiguity is a LIABILITY you resolve by picking.
+- MATCH = a decision/REACHABILITY question: you have BOTH endpoints, so the
+  question is "does a rule-sanctioned path from A REACH B?"  Branches become
+  PERMISSIBLE VARIATION, not decisions - you don't guess the schwa, you
+  look at B and check the rule PERMITS it there.  Ambiguity is an ASSET.
+Already measured in-code: orthoMatch's `candidate` grade catches pairs
+where top-1 transliteration != B but B is IN the candidate set; the
+epenthesis candidatePattern (wli-mmli/wsf-mmli) was added exactly so
+aqan/aqn grade `candidate` not skeleton.  The wins came from EXPOSING the
+branches as a set, not collapsing to one answer.
+
+### 9.2 Implication for the §8 model: shared rule DATA, two DRIVERS
+- PRODUCE (the alternative set) is the PIVOT: generation picks/ranks one,
+  match tests membership/reachability against the whole set.
+- SCORE: generation needs it sharp; match mostly needs EXISTENCE (a
+  low-prob branch is fine for match if B took it) - score becomes a
+  tie-break / match-confidence, not a gate.
+- MATCH adds a layer generation lacks: PERMISSIVENESS (dialect subs g<->q
+  l<->n, consonant-skeleton relaxation).  Not generation rules; they are
+  "how much rule-relaxation did A and B need to meet" - and that relaxation
+  distance IS the grade (exact -> candidate -> skeleton -> dialect-near).
+  Match output is a GRADED ALIGNMENT, not a boolean; the grade = the
+  confidence (a principled version of orthoMatch's current ad-hoc grades).
+- BIDIRECTIONAL is the load-bearing point: best match allows rule-sanctioned
+  variation on BOTH A and B (align A<->B), not transliterate-A-vs-B.
+  One-directional compare underperforms because it only spends A's
+  ambiguity budget.
+- Payoff: kills duplication.  Today a pair hand-writes transliterate() +
+  candidates() + candidatePattern() semi-independently (drift risk); under
+  the model all of them + explain + match derive from ONE rule list (the
+  I4 "many faces from one table", extended).
+
+### 9.3 Phonetics may help MATCH more than generation (new, important)
+All our mixed/flat phonetics evidence is GENERATION-side (pm-li
+phonology-in-prompt flat 58.8 vs 60.3).  But phonetic closeness is
+naturally a PERMISSIVENESS criterion (allow a phonetically-adjacent variant
+to match), and permissiveness is where match lives.  Plausible outcome:
+"skip phonetic SCORING, adopt phonetic PERMISSIVENESS."  So the §8.5
+phonetics probe must measure BOTH the generation score AND the match lift -
+the phonetic knowledge may pay on the match side where it didn't on
+generation.  Reinforces taxonomy-first (the phonology/morphology/irreducible
+buckets tell us what match should PERMIT vs what genuinely distinguishes
+words); adds a second thing to measure.
+
+### 9.4 Caution + cross-links
+- Do NOT over-unify: match is legitimately MORE permissive than generation;
+  one code path would make generation too loose or match too strict.  Keep
+  the cheap candidatePattern O(1) regex-membership path for the common
+  case; full A<->B alignment only for the hard residual.
+- This dovetails with §3: "comparison explain" is already noted as a
+  DIFFERENT animal from transliteration explain - match's explain is the
+  ALIGNMENT + RELAXATION derivation (which correspondences aligned A to B,
+  needing which grade), not a generation derivation.
+- Existing code to build on: wordwiki/transliterate-match.ts (orthoMatch,
+  grades, transliteratedSkeletons blocking), the spec candidatePattern,
+  the 3-pass similarity engine (blocking/judge/escalation), dialectSubs +
+  cskel relaxations.  [[similarity-engine]] [[transliteration-pairs]]
