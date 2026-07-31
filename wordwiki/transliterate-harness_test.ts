@@ -27,6 +27,22 @@ test("runHarness: scores, clusters, legacy fields", () => {
     assert(run.lines.some(l => l.includes('1/3 exact')), 'report line');
 });
 
+test("runHarness: provenance stamps corpus fingerprint + fold sizes", () => {
+    const [run] = runHarness(ORACLE, [{name: 'id', fn: (w) => w}],
+        {split: 'holdout', meta: {pairId: 'demo', engineVersion: 'v1'}});
+    const pv = run.provenance;
+    assertEquals([pv.pairId, pv.engineVersion, pv.totalN], ['demo', 'v1', 3]);
+    assertEquals(pv.trainN + pv.holdoutN, pv.totalN);          // exhaustive split
+    assert(/^[0-9a-f]{8}$/.test(pv.corpusFingerprint), pv.corpusFingerprint);
+    assert(run.lines[0].startsWith('[provenance]'), run.lines[0]);
+    // Same corpus (order-independent) -> same fingerprint; a changed pair -> not.
+    const [same] = runHarness([...ORACLE].reverse(), [{name: 'id', fn: (w) => w}], {split: 'all'});
+    assertEquals(same.provenance.corpusFingerprint, pv.corpusFingerprint);
+    const [diff] = runHarness([{source: 'z', target: 'z', tag: 't'}],
+        [{name: 'id', fn: (w) => w}], {split: 'all'});
+    assert(diff.provenance.corpusFingerprint !== pv.corpusFingerprint, 'fingerprint sensitive');
+});
+
 test("runHarness: baseline diff", () => {
     const [base] = runHarness(ORACLE, [{name: 'id', fn: (w) => w}], {split: 'all'});
     // A "rules change" that fixes abc and breaks def.

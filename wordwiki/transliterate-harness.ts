@@ -17,6 +17,11 @@
  * direct-vs-composed on the same oracle by default - the hub-vs-direct
  * measurement, formerly a hand-written candidate.
  *
+ * Every run leads with a [provenance] line - pair, engine version, corpus
+ * FINGERPRINT (order-independent hash of the oracle) and fold sizes - so a
+ * quoted score ("75.5% holdout") is reproducible and comparable: two runs
+ * with the same fingerprint scored the same corpus snapshot.
+ *
  * The loop: edit the pair's rules → run the harness → read
  *   1. the SCORE (exact matches; near-misses = edit distance 1 shown too),
  *      on the TRAIN split by default — pass --holdout for the untouched 20%
@@ -93,6 +98,17 @@ function hashFold(s: string, folds = 5): number {
     return Math.abs(h) % folds;
 }
 
+/** A stable, order-independent fingerprint of an oracle: FNV-1a over the
+ *  sorted source\ttarget\ttag rows.  Two runs quoting the same fingerprint
+ *  scored the SAME corpus snapshot - the anchor that makes "75.5% holdout"
+ *  reproducible and comparable across sessions. */
+export function corpusFingerprint(pairs: CorpusPair[]): string {
+    const rows = pairs.map(p => `${p.source}\t${p.target}\t${p.tag}`).sort();
+    let h = 2166136261;
+    for(const c of rows.join('\n')) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); }
+    return (h >>> 0).toString(16).padStart(8, '0');
+}
+
 export function splitPairs(allPairs: CorpusPair[], split: 'train'|'holdout'|'all')
         : {pairs: CorpusPair[], splitName: string} {
     const pairs = split === 'all' ? allPairs
@@ -109,6 +125,21 @@ export interface HarnessCandidate {
     fn: (word: string, opts?: {pos?: string}) => string;
 }
 
+/** What makes a reported number reproducible and comparable: which corpus
+ *  (fingerprint + fold sizes) and which engine (pair + version) produced
+ *  it.  Shared across the candidates of one runHarness call; also the shape
+ *  a later verdict/report pins so a score can be re-checked. */
+export interface RunProvenance {
+    pairId?: string;
+    engineVersion?: string;
+    corpusPath?: string;
+    corpusFingerprint: string;
+    totalN: number;
+    trainN: number;
+    holdoutN: number;
+    split: string;
+}
+
 export interface HarnessRun {
     name: string;
     splitName: string;
@@ -121,6 +152,8 @@ export interface HarnessRun {
     results: Record<string, boolean>;
     fixed?: string[];
     regressed?: {source: string, want: string, got: string}[];
+    /** Corpus + engine identity for this run (I3). */
+    provenance: RunProvenance;
     /** The printable report, exactly what the CLI shows. */
     lines: string[];
 }
@@ -129,13 +162,30 @@ export interface HarnessRun {
  *  minus file/flag IO, callable on JSON straight from a db query. */
 export function runHarness(rawPairs: unknown[], candidates: HarnessCandidate[],
         opts: {split?: 'train'|'holdout'|'all', clusterN?: number,
-               baseline?: Record<string, boolean>} = {}): HarnessRun[] {
+               baseline?: Record<string, boolean>,
+               meta?: {pairId?: string, engineVersion?: string, corpusPath?: string}} = {}): HarnessRun[] {
     const clusterN = opts.clusterN ?? 20;
-    const {pairs, splitName} = splitPairs(rawPairs.map(normalizeCorpusPair),
-                                          opts.split ?? 'train');
+    const normalized = rawPairs.map(normalizeCorpusPair);
+    const {pairs, splitName} = splitPairs(normalized, opts.split ?? 'train');
+    // Provenance is shared across candidates: same corpus + fold sizes.
+    const provenance: RunProvenance = {
+        ...opts.meta,
+        corpusFingerprint: corpusFingerprint(normalized),
+        totalN: normalized.length,
+        trainN: splitPairs(normalized, 'train').pairs.length,
+        holdoutN: splitPairs(normalized, 'holdout').pairs.length,
+        split: splitName,
+    };
+    const provLine = `[provenance] ` +
+        (provenance.pairId ? `pair=${provenance.pairId} ` : '') +
+        (provenance.engineVersion ? `engine=${provenance.engineVersion} ` : '') +
+        `corpus=${provenance.corpusFingerprint} ` +
+        `(n=${provenance.totalN} train=${provenance.trainN} holdout=${provenance.holdoutN}) ` +
+        `split=${opts.split ?? 'train'}` +
+        (provenance.corpusPath ? `  <${provenance.corpusPath}>` : '');
     const runs: HarnessRun[] = [];
     for(const cand of candidates) {
-        const lines: string[] = [];
+        const lines: string[] = [provLine];
         const fails: {p: CorpusPair, got: string}[] = [];
         let exact = 0, near = 0;
         const perTag = new Map<string, {n: number, ok: number}>();
@@ -187,7 +237,7 @@ export function runHarness(rawPairs: unknown[], candidates: HarnessCandidate[],
         const run: HarnessRun = {name: cand.name, splitName, n: pairs.length,
             exact, near,
             perTag: [...perTag.entries()].map(([tag, t]) => ({tag, ...t})),
-            clusters, results, lines};
+            clusters, results, provenance, lines};
 
         // Baseline diff.
         if(opts.baseline) {
@@ -290,7 +340,11 @@ async function main() {
         const rt = roundTripTransliterator(pairId);
         if(!rt) throw new Error(`no round trip for '${pairId}': the inverse `+
             `pair (${spec.targetLane}->${spec.sourceLane}) is not registered`);
-        const {pairs: split} = splitPairs(allPairs, all ? 'all' : holdout ? 'holdout' : 'train');
+        const splitName = all ? 'all' : holdout ? 'holdout' : 'train';
+        const {pairs: split} = splitPairs(allPairs, splitName);
+        console.log(`[provenance] pair=${pairId} engine=${spec.version} ` +
+                    `corpus=${corpusFingerprint(allPairs)} (n=${allPairs.length}) ` +
+                    `split=${splitName}  <${pairsPath}>`);
         for(const line of roundTripAudit(split.map(p => p.source), rt).lines)
             console.log(line);
         return;
@@ -313,7 +367,8 @@ async function main() {
         ? JSON.parse(Deno.readTextFileSync(baselinePath)) as Record<string, boolean>
         : undefined;
     const runs = runHarness(allPairs, candidates,
-        {split: all ? 'all' : holdout ? 'holdout' : 'train', clusterN, baseline});
+        {split: all ? 'all' : holdout ? 'holdout' : 'train', clusterN, baseline,
+         meta: {pairId, engineVersion: spec.version, corpusPath: pairsPath}});
     for(const run of runs) {
         for(const line of run.lines) console.log(line);
         if(writeBaseline) {

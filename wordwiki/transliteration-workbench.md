@@ -218,9 +218,27 @@ gap-closing, not a rebuild.  Increments, in build order:
   (move the junk filter into li-sf's extractCorpus so `--pair=li-sf` ==
   default) is a real output change → its own increment with its own
   verification, not folded silently here.
-- **I3 — standard provenance.**  Stamp each harness run with corpus id,
-  holdout size, pair+engine versions so pair numbers are comparable and
-  reproducible; surface it in the run report.
+- **[DONE 2026-07-31] I3 — standard provenance.**  Every runHarness()
+  result carries a RunProvenance {pairId, engineVersion, corpusPath,
+  corpusFingerprint, totalN, trainN, holdoutN, split}; each run's report
+  leads with a `[provenance]` line.  corpusFingerprint() = FNV-1a over the
+  SORTED source\ttarget\ttag rows (order-independent 8-hex); the anchor
+  that makes a quoted score reproducible.  A composition pair shows the
+  SAME fingerprint across its direct+composed candidates (same snapshot).
+  main() passes meta from the spec; the --roundtrip path stamps too.
+  Tests: fingerprint stability/sensitivity + fold-size + header (2 new; 8
+  pass); typecheck clean.
+  IT IMMEDIATELY EARNED ITS KEEP: the provenance line exposed that my I1
+  export (via ./wordwiki.sh, cwd=mmo/) wrote the 793-pair corpus to
+  mmo/, while the harness had been reading a STALE 637-pair repo-root file
+  from 07-27 - a silent corpus-identity swap.  The I1 direct==composed
+  conclusion still holds (structural identity, corpus-independent:
+  confirmed 101/177==101/177 on the 793 corpus too), but the SCORE differs
+  wildly by snapshot (wsf-mmli hub 70.7% on the 637 corpus vs 57.1% on the
+  793 corpus) - exactly why a bare percentage needs a fingerprint.
+  OPS NOTE captured: ./wordwiki.sh runs from mmo/, so export paths land in
+  mmo/ unless absolute - the harness reads repo-root by default; keep
+  oracle files in one place or pass absolute paths.
 - **I4 — explain-plan trace** as a first-class spec output (forces
   rules-as-data); then **I5 — rules-as-data migration** (benchmark
   li-sf v4).  I4/I5 are the larger back half; I1-I3 first.
