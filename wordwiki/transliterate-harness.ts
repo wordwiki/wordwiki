@@ -9,6 +9,8 @@
  *        [--write-baseline path] [--baseline path] [--clusters N] \
  *        [--roundtrip]     # A->B->A consistency audit (needs the inverse
  *                          # pair registered); no target column used
+ *        [--explain WORD]  # print the derivation (fired rules, in order)
+ *                          # for one word - needs a rule-list engine
  *        [--calibrate]     # (li-sf only) regenerate transliterate-calibration.ts:
  *                          # per-risk-band MEASURED accuracy on the train
  *                          # folds, validated on the holdout
@@ -42,6 +44,7 @@
 import { type CorpusPair, normalizeCorpusPair,
          transliterationPair, transliterationPairIds, validateCompositions,
          composedTransliterator, roundTripTransliterator } from './transliterate-pair.ts';
+import { renderTrace } from './transliterate-rules.ts';
 
 // --- tiny edit-script diff (short strings; classic DP) -----------------------
 
@@ -311,6 +314,7 @@ async function main() {
     const holdout = flag('--holdout');
     const all = flag('--all');
     const roundtripFlag = flag('--roundtrip');
+    const explainWord = opt('--explain');
     const pairId = opt('--pair') ?? 'li-sf';
     const candidateName = opt('--candidate');
     const writeBaseline = opt('--write-baseline');
@@ -320,6 +324,16 @@ async function main() {
     const spec = transliterationPair(pairId);
     if(!spec) throw new Error(
         `unknown pair '${pairId}' (registered: ${transliterationPairIds().join(', ')})`);
+
+    // Explain plan for one word (I4): the derivation from the pair's rule
+    // list.  No oracle needed - it reads the engine, not a corpus.
+    if(explainWord !== undefined) {
+        if(!spec.explain) throw new Error(
+            `--explain: pair '${pairId}' has no explain plan ` +
+            `(its engine is not a compiled rule list yet)`);
+        for(const line of renderTrace(spec.explain(explainWord))) console.log(line);
+        return;
+    }
 
     // Default oracle path is spec-owned data, not an id branch.
     const pairsPath = args[0] ?? spec.corpusPath ?? `transliteration-pairs-${pairId}.json`;

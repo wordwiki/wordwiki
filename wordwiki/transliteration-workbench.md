@@ -239,9 +239,29 @@ gap-closing, not a rebuild.  Increments, in build order:
   OPS NOTE captured: ./wordwiki.sh runs from mmo/, so export paths land in
   mmo/ unless absolute - the harness reads repo-root by default; keep
   oracle files in one place or pass absolute paths.
-- **I4 — explain-plan trace** as a first-class spec output (forces
-  rules-as-data); then **I5 — rules-as-data migration** (benchmark
-  li-sf v4).  I4/I5 are the larger back half; I1-I3 first.
+- **[DONE 2026-07-31] I4 — explain-plan trace + the rule-list
+  interpreter.**  New wordwiki/transliterate-rules.ts: a transliterator as
+  an ordered list of named rules (reRule = declarative regex→replacement,
+  publishable; fnRule = named escape hatch).  compileRules(rules) yields
+  BOTH faces from one list - transliterate (run, no recording) and explain
+  (run, record each FIRED step as {ruleId, label, before, after}) - dz's
+  "emit fast + traced from one table".  Rule ids are CONTENT-KEYED (FNV of
+  pattern+flags+replacement, or label for fnRule) so they survive
+  reordering - the anchor a verdict/feedback fact pins.  TransliterationTrace
+  + renderTrace + spec.explain? field + harness `--explain WORD`.
+  PILOT: pm-li (the research pair - explain feeds the coming error
+  taxonomy).  Its imperative chain rewritten as PM_LI_RULES (22 rules,
+  same regexes/order); explainPmToLi registered.  FAITHFUL REFACTOR PROVEN:
+  0 diffs across 1210 outputs vs the pre-change oracle; harness score
+  (72/241 holdout) and corpus fingerprint (07e9b827) unchanged.  Live
+  --explain shows real derivations (e.g. tātjo → ta'ju via ā→a', tj→j,
+  o→u; the o→u rule keeps id ee232da4 across words).  Tests: 6 interpreter
+  + group green (26); typecheck clean.
+  NEXT: **I5 — migrate li-sf v4** to a rule list (the big one: risk
+  markers, pos conditioning, lexical exceptions - expect some fnRules;
+  the legibility test is whether its published page needs prose apologies).
+  Then the published correspondence-table page falls out of compileRules'
+  .rules + .rulesFingerprint + the archival publish model.
 
 ## 7. Proposed phase order (standing proposal, not yet approved as a plan)
 

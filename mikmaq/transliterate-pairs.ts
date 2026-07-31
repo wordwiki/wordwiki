@@ -23,7 +23,8 @@ import { db } from '../liminal/db.ts';
 import { registerTransliterationPair, type CorpusPair } from '../wordwiki/transliterate-pair.ts';
 import { transliterateLiToSf, transliterateCandidates,
          CANDIDATE_TRANSLITERATORS, TRANSLITERATOR_VERSION } from '../wordwiki/transliterate.ts';
-import { PM_LI_VERSION, transliteratePmToLi, pmLiCandidates, pmLiPattern } from './pacifique-transliterate.ts';
+import { PM_LI_VERSION, transliteratePmToLi, explainPmToLi,
+         pmLiCandidates, pmLiPattern } from './pacifique-transliterate.ts';
 import { calibrateLiSf } from '../wordwiki/transliterate-calibrate.ts';
 import { transliterateWsfToWli, wsfWliCandidates, wsfWliCandidatePattern,
          wliMmliCandidatePattern, wsfMmliCandidatePattern,
@@ -211,6 +212,7 @@ export function registerMikmaqTransliterationPairs(): void {
         id: 'pm-li', sourceLane: 'mm-pm', targetLane: 'mm-li',
         version: PM_LI_VERSION,
         transliterate: transliteratePmToLi,
+        explain: explainPmToLi,
         candidates: pmLiCandidates,
         candidatePattern: pmLiPattern,
         candidateTransliterators: [

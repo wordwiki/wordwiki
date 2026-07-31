@@ -11,6 +11,7 @@
  */
 import type { WordWiki } from './wordwiki.ts';
 import type { Pattern } from './transliterate-pattern.ts';
+import type { TransliterationTrace } from './transliterate-rules.ts';
 
 /** One oracle pair.  (The legacy li-sf corpus files use {li, sf} field
  *  names; loaders normalize - see normalizeCorpusPair.) */
@@ -30,6 +31,11 @@ export interface TransliterationPairSpec {
     version: string;
     /** The current rules: word -> best transliteration. */
     transliterate(word: string, opts?: {pos?: string}): string;
+    /** The EXPLAIN PLAN for one word (I4): the ordered rules that fired to
+     *  produce transliterate()'s output.  Present when the pair's engine is
+     *  a compiled rule list (transliterate-rules.ts); the review UI and the
+     *  published correspondence table read it.  Recomputed, never stored. */
+    explain?(word: string, opts?: {pos?: string}): TransliterationTrace;
     /** Ranked candidates (the AMBIGUITY surface - dz: an ambiguous answer
      *  beats a guess or a refusal, users can correct it, and matching can
      *  use the whole set).  Always >= 1. */
