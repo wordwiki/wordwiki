@@ -72,6 +72,12 @@ export interface TraceStep {
     label: string;
     before: string;
     after: string;
+    /** For a PROBABILISTIC branch decision (e.g. li-sf's engine, not a plain
+     *  deterministic rule): what the output would have been had the other
+     *  branch been chosen, and the chosen branch's MEASURED probability.
+     *  Absent for deterministic rules. */
+    alternative?: string;
+    probability?: number;
 }
 
 export interface TransliterationTrace {
@@ -125,7 +131,11 @@ export function renderTrace(t: TransliterationTrace): string[] {
     const lines = [`explain ${t.pairId ?? ''} ${t.version ?? ''}`.trimEnd(),
                    `  ${t.input}  →  ${t.output}`];
     if(t.steps.length === 0) lines.push('  (no rule fired; output == input)');
-    for(const s of t.steps)
-        lines.push(`  [${s.ruleId}] ${s.label.padEnd(28)} ${s.before} → ${s.after}`);
+    for(const s of t.steps) {
+        const decision = s.probability !== undefined
+            ? `   [chose p=${s.probability.toFixed(2)}${s.alternative !== undefined ? `; alt ${s.alternative}` : ''}]`
+            : '';
+        lines.push(`  [${s.ruleId}] ${s.label.padEnd(28)} ${s.before} → ${s.after}${decision}`);
+    }
     return lines;
 }

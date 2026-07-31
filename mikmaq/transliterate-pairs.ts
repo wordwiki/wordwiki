@@ -21,7 +21,7 @@
  */
 import { db } from '../liminal/db.ts';
 import { registerTransliterationPair, type CorpusPair } from '../wordwiki/transliterate-pair.ts';
-import { transliterateLiToSf, transliterateCandidates,
+import { transliterateLiToSf, transliterateCandidates, explainLiToSf,
          CANDIDATE_TRANSLITERATORS, TRANSLITERATOR_VERSION } from '../wordwiki/transliterate.ts';
 import { PM_LI_VERSION, transliteratePmToLi, explainPmToLi,
          pmLiCandidates, pmLiPattern } from './pacifique-transliterate.ts';
@@ -135,6 +135,7 @@ export function registerMikmaqTransliterationPairs(): void {
         id: 'li-sf', sourceLane: 'mm-li', targetLane: 'mm-sf',
         version: TRANSLITERATOR_VERSION,
         transliterate: (w, opts) => transliterateLiToSf(w, opts ?? {}),
+        explain: (w, opts) => explainLiToSf(w, opts ?? {}),
         candidates: (w, k) => transliterateCandidates(w, k).map(c => c.text),
         candidateTransliterators: [...CANDIDATE_TRANSLITERATORS,
             // The composition-audit candidate: what Rand's phonetics

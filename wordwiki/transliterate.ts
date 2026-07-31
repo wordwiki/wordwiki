@@ -28,6 +28,9 @@
 
 export const TRANSLITERATOR_VERSION = 'li-sf/rules-v4';
 
+import { compileRules, reRule, fnRule, type TransliterationRule,
+         type TransliterationTrace, type TraceStep } from './transliterate-rules.ts';
+
 // Sonorants that take the schwa/syllabicity apostrophe before a following
 // obstruent in Smith-Francis (corpus: l_t ×150, n_t ×89, l_p ×81, n_j ×73…;
 // w and k/q contexts measurably DON'T - including them lowers accuracy).
@@ -66,6 +69,75 @@ export const LEXICAL_EXCEPTIONS: Record<string, string> = {
     'goqwei': 'koqwey',
     'Goqwei': 'Koqwey',
 };
+
+// --------------------------------------------------------------------------
+// --- Explain plan (I5): li-sf is a HYBRID engine -----------------------------
+// --------------------------------------------------------------------------
+//
+// Unlike a deterministic rule-chain pair (e.g. pm-li), li-sf's output is
+// transliterateCandidates(...)[0].text - a DETERMINISTIC prefix (lexical
+// exceptions, g->k) followed by PROBABILISTIC branch decisions (insert the
+// cluster/schwa/ei apostrophe or not) each resolved by a MEASURED context
+// probability (BRANCH_PROBABILITIES).  So only the deterministic layer is
+// genuine rules-as-data; the branch engine is inherently procedural and
+// stays as code.  The explain reflects exactly that: the deterministic
+// rules that fired, then one step per FIRED branch decision carrying its
+// chosen probability and the alternative it beat.  A pure regex-list
+// migration would MISREPRESENT the architecture (I5 finding).
+
+/** li-sf's deterministic layer as data: whole-word irregulars (fn escape
+ *  hatch - a map lookup, not a regex) then g->k.  Produces the same `base`
+ *  transliterateCandidates computes inline (asserted in the tests). */
+export const LI_SF_DETERMINISTIC_RULES: TransliterationRule[] = [
+    fnRule('lexical exception',
+        w => w.replace(/[^\s.,!?]+/g, x => LEXICAL_EXCEPTIONS[x] ?? x),
+        'whole-word irregulars mined from the oracle (freq >=4, consistency >=75%)'),
+    reRule('g → k', /g/g, 'k'),
+    reRule('G → K', /G/g, 'K'),
+];
+const liSfDeterministic = compileRules(LI_SF_DETERMINISTIC_RULES,
+    {pairId: 'li-sf', version: TRANSLITERATOR_VERSION});
+
+/** Apply one branch site's edit to `s` (mirrors transliterateCandidates,
+ *  which applies right-to-left so a site's index stays valid). */
+function applyBranch(site: BranchSite, s: string, take: boolean): string {
+    if(!take) return s;
+    if(site.kind === 'cluster') return s.slice(0, site.index + 1) + "'" + s.slice(site.index + 1);
+    if(site.kind === 'ei') return s.slice(0, site.index) + s[site.index] + 'y' + s.slice(site.index + 2);
+    return s.slice(0, site.index) + 'î' + s.slice(site.index + 1);   // schwa
+}
+
+/**
+ * The li-sf derivation for one word (I5): the deterministic rules that
+ * fired, then each FIRED branch decision with its measured probability and
+ * the alternative branch's output.  Faithful by construction - it replays
+ * the engine's own primitives and asserts the reconstructed output equals
+ * transliterateLiToSf (a loud guard against drift).
+ */
+export function explainLiToSf(li: string, opts: TransliterateOpts = {}): TransliterationTrace {
+    const detTrace = liSfDeterministic.explain(li);
+    const steps: TraceStep[] = [...detTrace.steps];
+    const base = detTrace.output;
+    const sites = branchSites(base, opts);
+    // Top-1 takes each independent site's more-probable branch (P > .5).
+    // Apply right-to-left (engine order) so indices stay valid; the recorded
+    // steps then chain (each after == the next before).
+    let cur = base;
+    for(let j = sites.length - 1; j >= 0; j--) {
+        const site = sites[j];
+        const pTake = branchP(site.kind, site.key);
+        const taken = pTake > 0.5;
+        const before = cur;
+        cur = applyBranch(site, cur, taken);
+        if(cur !== before)   // fired: the chosen branch changed the string
+            steps.push({ruleId: site.key, label: site.label, before, after: cur,
+                        alternative: applyBranch(site, before, !taken), probability: pTake});
+    }
+    const output = transliterateLiToSf(li, opts);
+    if(cur !== output) throw new Error(
+        `explainLiToSf drift: reconstructed '${cur}' !== engine '${output}' for '${li}'`);
+    return {input: li, output, steps, pairId: 'li-sf', version: TRANSLITERATOR_VERSION};
+}
 
 /**
  * Transliterate Listuguj text to Smith-Francis under the current rules.

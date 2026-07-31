@@ -257,11 +257,38 @@ gap-closing, not a rebuild.  Increments, in build order:
   --explain shows real derivations (e.g. tātjo → ta'ju via ā→a', tj→j,
   o→u; the o→u rule keeps id ee232da4 across words).  Tests: 6 interpreter
   + group green (26); typecheck clean.
-  NEXT: **I5 — migrate li-sf v4** to a rule list (the big one: risk
-  markers, pos conditioning, lexical exceptions - expect some fnRules;
-  the legibility test is whether its published page needs prose apologies).
-  Then the published correspondence-table page falls out of compileRules'
-  .rules + .rulesFingerprint + the archival publish model.
+- **[DONE 2026-07-31] I5 — li-sf explain + the HYBRID-ENGINE finding.**
+  Reading the engine changed the plan (a real architecture finding, not a
+  mechanical migration): li-sf's `transliterateLiToSf` = the top
+  `transliterateCandidates` result - a DETERMINISTIC prefix (lexical
+  exceptions, g->k) then PROBABILISTIC branch decisions (cluster/schwa/ei
+  apostrophe or not), each resolved by a MEASURED context probability
+  (BRANCH_PROBABILITIES).  So a full compileRules regex-list migration
+  would MISREPRESENT it - the branch engine is inherently procedural and
+  stays as code.  What IS rules-as-data: the deterministic layer
+  (LI_SF_DETERMINISTIC_RULES = fnRule lexical + reRule g->k/G->K) plus the
+  already-generated probability table.
+  DELIVERED (hot path UNTOUCHED - li-sf is the production editor engine):
+  (a) trace model extended additively - TraceStep gains optional
+  {alternative, probability} for branch decisions; renderTrace shows them.
+  (b) explainLiToSf: deterministic fired steps + one step per FIRED branch
+  decision carrying its chosen probability and the alternative it beat;
+  faithful BY CONSTRUCTION (replays the engine primitives, asserts
+  reconstructed == transliterateLiToSf - a loud drift guard).  Registered
+  as li-sf's spec.explain.
+  VERIFIED: 0 drift/throw across all 1527 corpus words; live --explain
+  renders real decisions (aqantie'umk shows a p=0.57 near-coin-flip + a
+  p=0.76 - exactly the low-confidence sites the review workflow surfaces
+  first).  Tests: 4 li-sf-explain + group green (24, incl. untouched
+  production auto-transliterate); typecheck clean.
+  CONSEQUENCE for the published artifact: li-sf's page is a HYBRID - a
+  deterministic correspondence table + a branch-site table with measured
+  probabilities - not a flat regex list.  That is honest, not an apology:
+  the probabilities ARE the linguistically interesting content (the char-
+  rule ceiling the module doc describes).  pm-li-style pure rule-lists and
+  li-sf-style hybrid both fit under spec.explain; the review workflow and
+  the published page consume the same TransliterationTrace shape either
+  way.  Hardening phase (I1-I5) COMPLETE.
 
 ## 7. Proposed phase order (standing proposal, not yet approved as a plan)
 
