@@ -4,7 +4,10 @@ set -e
 # Refresh the mikmaqonline.org staging checkout from this dev machine:
 #   1. stop the staging wordwiki (per-user systemd service),
 #   2. git pull --ff-only on the remote checkout (latest main from origin),
-#   3. rsync THIS dev instance's db over its db, and
+#   3. rsync THIS dev instance's db, its generated review artifacts
+#      (resources/generated/, gitignored so git pull can't carry them), and
+#      the content-addressable STORE (content/derived/imports, union-merged
+#      with NO --delete - safe because it is hash-addressed), and
 #   4. start the staging wordwiki again (which re-runs transpile on the new code).
 #
 # The server is stopped for the swap so SQLite releases its write lock and
@@ -67,13 +70,29 @@ rsync -v "$DB" "$STAGING_HOST:$STAGING_DIR/mmo/database/db.db"
 # so git pull never carries them - ship them like the db (dz 2026-07-31).
 # --delete keeps staging's copy in step with dev's (all files here are
 # regenerable by importWordWikiV1Db.sh).  Trailing slashes: contents-of ->
-# into.  (The content-addressable derivation CACHE dirs still need the same
-# treatment - a separate TODO for the expensive LLM artifacts.)
+# into.
 GEN="$WORDWIKI_SRC/resources/generated/"
 if [ -d "$GEN" ]; then
     ssh "$STAGING_HOST" "mkdir -p ~/$STAGING_DIR/resources/generated"
     rsync -av --delete "$GEN" "$STAGING_HOST:$STAGING_DIR/resources/generated/"
 fi
+
+# The CONTENT-ADDRESSABLE STORE (content / derived / imports) - ship dev's
+# onto staging's, deliberately NO --delete (dz 2026-07-31).  Because every
+# file is named by the hash of its bytes, rsyncing two stores onto each
+# other is a safe UNION: identical inputs are identical files, new
+# derivations only ADD, nothing can conflict or go stale.  So we never drop
+# what only staging has, and the reverse pull (pullSharedContent.sh) is
+# equally safe.  Incremental after the first (big) sync.  The store is a
+# sibling of the checkout (../mmo-shared-content), symlinked into mmo/ -
+# we ship through the checkout path so staging's symlinks resolve to its
+# own store.
+SHARED="${WORDWIKI_SHARED_CONTENT:-$(dirname "$WORDWIKI_SRC")/mmo-shared-content}"
+for store in content derived imports; do
+    [ -d "$SHARED/$store" ] || continue
+    echo "         content store: $store/ (union, no --delete)"
+    rsync -a "$SHARED/$store/" "$STAGING_HOST:$STAGING_DIR/mmo/$store/"
+done
 
 echo "=== 4/4  start wordwiki on $STAGING_HOST ==="
 ssh "$STAGING_HOST" "$SC start wordwiki.service"
