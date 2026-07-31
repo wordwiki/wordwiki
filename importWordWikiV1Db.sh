@@ -166,7 +166,14 @@ normalize-shoebox-dates normalize-shoebox-dates-proof \
 migrate-status migrate-status-proof migrate-variants migrate-variants-proof \
 auto-publish-sf auto-publish-sf-proof \
 rand-import rand-transform rand-printed-pages clark-printed-pages rand-binding \
-verify-migration verify-workspace smoke"
+pm-li-taxonomy verify-migration verify-workspace smoke"
+
+# Generated REVIEW ARTIFACTS (rand binder gallery, pm-li taxonomy, ...) land
+# in resources/generated/ - a GITIGNORED dir shipped to staging by
+# updateStaging.sh rsync, NOT committed (dz 2026-07-31: committing
+# regenerated HTML churns git + conflicts).  Ensure it exists before the
+# steps that write into it.
+mkdir -p resources/generated
 # ONE consolidated EXIT trap (bash keeps a single trap per signal - the
 # smoke test's cookie cleanup lives here too, NOT in its own trap, which
 # would silently REPLACE this one and skip the assembly on success).
@@ -273,7 +280,13 @@ step "[16/19] binding the book's CACHED pages to rand entries"
     --details=../watson/rand-binder-full-eval.md || [ $? -eq 2 ]
 ./wordwiki.sh bind-references Rand rand --cited-book='Rand 1888' \
     --printed=46-55 --source-lane=rand --apply --cached-only \
-    --review-html=../resources/rand-binder-review.html > /dev/null || [ $? -eq 2 ]
+    --review-html=../resources/generated/rand-binder-review.html > /dev/null || [ $? -eq 2 ]
+
+step "[16b/19] building the pm-li taxonomy review page (from the PDM gold)"
+# No-arg, read-only: reads the corpus from the db via the pm-li pair's
+# extractCorpus, writes resources/generated/pm-li-taxonomy.html.  Skips
+# cleanly if the PDM gold isn't in this db.
+./wordwiki.sh build-pm-li-taxonomy --report=$RD/16b-pm-li-taxonomy.md
 
 step "[17/19] verifying the migration"
 ./wordwiki.sh verify-migration --report=$RD/17-verify-migration.md

@@ -51,6 +51,7 @@ import { migrateVariants } from './variant-migrate.ts';
 import { migrateStatus } from './status-migrate.ts';
 import { pairJunkReason, autoPublishSf } from './auto-transliterate.ts';
 import { transliterationPair, transliterationPairIds } from './transliterate-pair.ts';
+import { buildPmLiTaxonomy } from '../mikmaq/pm-li-taxonomy.ts';
 import { repairAssertions } from './repair-assertions.ts';
 import { backfillPublication } from './publication-backfill.ts';
 import { normalizeShoeboxDates } from './creation-dates.ts';
@@ -585,6 +586,31 @@ export async function cliMain(args: string[]): Promise<void> {
         // NAMED (never silently).  --pair=<id> exports any REGISTERED
         // pair's corpus instead (its extractor owns its own cleaning).
         //   ./wordwiki.sh export-transliteration-pairs [path.json] [--pair=ID]
+        // Build the pm-li taxonomy REVIEW PAGE from the db's PDM gold - a
+        // no-arg pipeline step (the "build review pages" family).  Reads the
+        // corpus via the registered pair's extractCorpus (no scratch json),
+        // writes resources/generated/ (gitignored, rsync'd to staging).
+        // Read-only; skips cleanly when the pm-li gold isn't in this db.
+        //   ./wordwiki.sh build-pm-li-taxonomy [--report=path.md]
+        case 'build-pm-li-taxonomy': {
+            const step = stepReport('Build the pm-li taxonomy review page');
+            try {
+                security.runSystem(() => {
+                    ww.ensureNewStyleTables();
+                    const spec = transliterationPair('pm-li');
+                    if(!spec?.extractCorpus) throw new Error('pm-li pair has no corpus extractor');
+                    const {pairs} = spec.extractCorpus(ww);
+                    if(pairs.length === 0) { step.log('no pm-li gold in this db - page not built (skipped)'); return; }
+                    const s = buildPmLiTaxonomy(pairs);
+                    step.log(`${s.misses} misses of ${s.holdout} holdout (${s.hits} hits); ` +
+                             `${s.critical} expert-critical -> ${s.htmlPath}`);
+                });
+                step.finish();
+            } catch(e) { step.crash(e); throw e; }
+            Deno.exit(0);
+            break;
+        }
+
         case 'export-transliteration-pairs': {
             security.runSystem(() => {
                 ww.ensureNewStyleTables();

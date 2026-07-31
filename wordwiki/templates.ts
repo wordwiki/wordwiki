@@ -554,9 +554,12 @@ export function navBar(showTestClientLink: boolean = defaultShowTestClientLink,
              ['a', {class:'nav-link dropdown-toggle', href:'#', role:'button', 'data-bs-toggle':'dropdown', 'aria-expanded':'false'},
               'Reviews'],
              ['ul', {class:'dropdown-menu'},
-              ['li', {}, ['a', {class:'dropdown-item', href:'/resources/pm-li-taxonomy.html'}, 'Pacifique → Listuguj Spelling Review']],
+              // resources/generated/* are pipeline-built + rsync'd to staging
+              // (gitignored, not committed).  transcribe-eval is still a
+              // committed artifact pending the same treatment.
+              ['li', {}, ['a', {class:'dropdown-item', href:'/resources/generated/pm-li-taxonomy.html'}, 'Pacifique → Listuguj Spelling Review']],
               ['li', {}, ['a', {class:'dropdown-item', href:'/resources/transcribe-eval.html'}, 'PDM LLM Transcription Eval']],
-              ['li', {}, ['a', {class:'dropdown-item', href:'/resources/rand-binder-review.html'}, 'Rand Binder Review']],
+              ['li', {}, ['a', {class:'dropdown-item', href:'/resources/generated/rand-binder-review.html'}, 'Rand Binder Review']],
              ]],
 
             // --- Admin

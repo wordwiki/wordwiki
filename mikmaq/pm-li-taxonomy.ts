@@ -106,23 +106,26 @@ function bucketOf(tags: string[], residual: boolean): {bucket: string, lever: st
 }
 
 // --- render ------------------------------------------------------------------
-function diffHtml(machine: string, gold: string): string {
-    // highlight machine chars that differ from gold's alignment
-    const esc = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    let mh = '', gh = '';
-    for(const o of align(machine, gold)) {
-        if(o.op === '=') { mh += esc(o.a); gh += esc(o.b); }
-        else if(o.op === 'sub') { mh += `<b>${esc(o.a)}</b>`; gh += `<b>${esc(o.b)}</b>`; }
-        else if(o.op === 'del') { mh += `<b>${esc(o.a)}</b>`; }
-        else { gh += `<b>${esc(o.b)}</b>`; }
+const esc = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+/** `a` rendered with the chars that differ from `b` marked; an `ins` (b has
+ *  a char a lacks) leaves a thin gap caret so a missing letter is visible. */
+function markDiff(a: string, b: string): string {
+    let out = '';
+    for(const o of align(a, b)) {
+        if(o.op === '=') out += esc(o.a);
+        else if(o.op === 'sub') out += `<mark>${esc(o.a)}</mark>`;
+        else if(o.op === 'del') out += `<mark>${esc(o.a)}</mark>`;   // a has an extra char
+        else out += `<i class="gap"></i>`;                          // b has a char a lacks
     }
-    return `<span class="mm">${mh}</span> <span class="arrow">vs gold</span> <span class="gold">${gh}</span>`;
+    return out;
 }
 
+// Phenomenon chip hues — kept semantic (each a distinct lever family) but
+// pulled toward muted, ink-compatible tones so ten chips don't shout.
 const TAG_COLOR: Record<string,string> = {
-    length: '#b58900', uvular: '#268bd2', glide: '#2aa198',
-    'vowel-quality': '#859900', epenthesis: '#6c71c4', palatal: '#cb4b16',
-    suffix: '#d33682', data: '#93a1a1', 'gloss-leak': '#586e75', residual: '#dc322f',
+    length: '#9a7b2e', uvular: '#2f6f97', glide: '#2f8f86',
+    'vowel-quality': '#6f8a3c', epenthesis: '#6a6aa8', palatal: '#b0662f',
+    suffix: '#b0537a', data: '#8b9296', 'gloss-leak': '#5a6b72', residual: '#c0453a',
 };
 
 /** Conservative gloss-leak detector: the corpus extractor (pdmRefCorpus)
@@ -137,16 +140,34 @@ function glossLeak(source: string, gold: string): boolean {
     return FRENCH.test(source) || ENGLISH.test(gold) || /\//.test(gold);
 }
 
-function main() {
-    const args = [...Deno.args];
-    const corpusPath = args[0] ?? 'transliteration-pairs-pm-li.json';
-    const raw = JSON.parse(Deno.readTextFileSync(corpusPath)).map(normalizeCorpusPair);
-    const hold = splitPairs(raw, 'holdout').pairs;
+// Output goes to resources/generated/ (a GITIGNORED dir of pipeline-built
+// artifacts shipped to staging by updateStaging.sh rsync, NOT committed -
+// dz 2026-07-31: committing regenerated HTML churns git + conflicts).
+// Paths are import.meta.url-relative so they resolve the same whatever the
+// cwd (the CLI runs from mmo/, this script from repo root).
+const GEN_DIR = new URL('../resources/generated/', import.meta.url).pathname;
+const HTML_PATH = GEN_DIR + 'pm-li-taxonomy.html';
+const DATA_PATH = GEN_DIR + 'pm-li-taxonomy-data.json';
+// The human verdict layer STAYS committed (small, no churn) beside this file.
+const VERDICT_PATH = new URL('./pm-li-taxonomy-verdicts.json', import.meta.url).pathname;
 
-    // Existing human verdicts (persisted; the generator MERGES, never overwrites).
-    const verdictPath = new URL('./pm-li-taxonomy-verdicts.json', import.meta.url).pathname;
+export interface TaxonomyStats {
+    holdout: number; hits: number; misses: number; critical: number;
+    phenomCount: Record<string, number>; bucketCount: Record<string, number>;
+    htmlPath: string;
+}
+
+/** Build the review page + machine-data JSON from an oracle (pairs from the
+ *  db via the pm-li extractCorpus, or a scratch json in dev).  Returns
+ *  sizing stats for the caller to log/report.  Writes into resources/
+ *  generated/ (created if absent). */
+export function buildPmLiTaxonomy(rawPairs: unknown[]): TaxonomyStats {
+    Deno.mkdirSync(GEN_DIR, {recursive: true});
+    const hold = splitPairs((rawPairs as any[]).map(normalizeCorpusPair), 'holdout').pairs;
+
+    // Existing human verdicts (persisted; MERGED by id, never overwritten).
     let verdicts: Record<string, any> = {};
-    try { verdicts = JSON.parse(Deno.readTextFileSync(verdictPath)); } catch { /* none yet */ }
+    try { verdicts = JSON.parse(Deno.readTextFileSync(VERDICT_PATH)); } catch { /* none yet */ }
 
     const cards: any[] = [];
     let hits = 0;
@@ -172,82 +193,96 @@ function main() {
     cards.sort((a, b) => (b.expertCritical?1:0) - (a.expertCritical?1:0));
 
     // machine-data JSON (regenerated freely; the verdicts file is the human layer)
-    const dataPath = new URL('./pm-li-taxonomy-data.json', import.meta.url).pathname;
-    Deno.writeTextFileSync(dataPath, JSON.stringify(cards, null, 1));
-
-    // console sizing (the preliminary taxonomy — no expert needed)
-    console.log(`pm-li holdout: ${hold.length} pairs, ${hits} hits, ${cards.length} misses`);
-    console.log('\nPHENOMENA present (multi-label; a miss can carry several):');
-    for(const [k,v] of Object.entries(phenomCount))
-        console.log(`  ${k.padEnd(12)} in ${v} misses`);
-    console.log('\nPRIMARY bucket → lever:');
-    for(const [k,v] of Object.entries(bucketCount).sort((a,b)=>b[1]-a[1]))
-        console.log(`  ${k.padEnd(14)} ${v}`);
+    Deno.writeTextFileSync(DATA_PATH, JSON.stringify(cards, null, 1));
     const critical = cards.filter(c => c.expertCritical).length;
-    console.log(`\nEXPERT-CRITICAL misses (need the gold reading): ${critical} of ${cards.length}`);
 
     // review page
-    const esc = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    const legend = Object.entries(TAG_COLOR).map(([t,c]) =>
-        `<span class="tag" style="background:${c}">${t}</span>`).join(' ');
+    const chip = (t: string, n?: number) =>
+        `<span class="tag" style="background:${TAG_COLOR[t] ?? 'var(--muted)'}">${t}</span>`
+        + (n !== undefined ? `<span class="count">${n}</span>` : '');
     const cardHtml = cards.map(c => {
-        const tags = c.tags.map((t:string) => `<span class="tag" style="background:${TAG_COLOR[t]}">${t}</span>`).join(' ');
+        const tags = c.tags.map((t:string) => chip(t)).join(' ');
         const q = c.bucket === 'morph-suspect'
-            ? `Is the gold a REGULARIZED citation form (not a faithful transcription of the Pacifique)?  ☐ yes (lever 2)  ☐ no — machine is wrong`
-            : c.bucket === 'residual'
-            ? `Machine wrong &amp; gold faithful?  correct Listuguj form: ______________   ☐ or gold is regularized`
-            : `(machine-handled — confirm only if you disagree)`;
-        const v = c.verdict ? `<div class="verdict">recorded: ${esc(JSON.stringify(c.verdict))}</div>` : '';
-        return `<div class="card ${c.expertCritical?'crit':''}">
-  <div class="src">${esc(c.source)}</div>
-  <div class="diff">${diffHtml(c.machine, c.gold)}</div>
-  <div class="tags">${tags} <span class="lever">→ lever ${esc(c.lever)}</span></div>
-  <div class="rules">rules fired: ${c.fired.length ? esc(c.fired.join(' · ')) : '(none)'}</div>
-  <div class="q">${q}</div>${v}
-</div>`;
+            ? `Is the gold a tidy <i>citation / dictionary</i> spelling rather than a faithful transcription of what Pacifique wrote?  &nbsp;☐&nbsp;yes, regularized &nbsp;·&nbsp; ☐&nbsp;no, the auto form is wrong`
+            : `The auto form looks wrong.  Correct Listuguj: <span class="blank"></span> &nbsp;·&nbsp; ☐&nbsp;or the gold is a regularized citation form`;
+        const v = c.verdict ? `<div class="verdict">✓ recorded: ${esc(JSON.stringify(c.verdict))}</div>` : '';
+        return `<article class="card ${c.expertCritical?'crit':''}">
+  <div class="form src"><span class="eyebrow">Pacifique</span><span class="val word">${esc(c.source)}</span></div>
+  <div class="form auto"><span class="eyebrow">auto</span><span class="val word">${markDiff(c.machine, c.gold)}</span></div>
+  <div class="form gold"><span class="eyebrow">Listuguj</span><span class="val word">${markDiff(c.gold, c.machine)}</span></div>
+  <div class="meta">${tags}<span class="lever">lever ${esc(c.lever)}</span></div>
+  <div class="rules">rules: ${c.fired.length ? esc(c.fired.join(' · ')) : '—'}</div>
+  ${c.expertCritical ? `<div class="q">${q}</div>` : ''}${v}
+</article>`;
     }).join('\n');
 
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
-<title>pm-li error taxonomy — reading session</title>
+    const TOK_LIGHT = `--paper:#f7f5ef;--card:#fffef9;--ink:#26282d;--muted:#6d7178;--line:#e5e0d5;--accent:#2c6e9b;--pacifique:#8a6a3c;--crit:#b0537a;--crit-bg:#fbf3f6`;
+    const TOK_DARK  = `--paper:#181a1e;--card:#20232a;--ink:#e7e5de;--muted:#9aa0a8;--line:#31353d;--accent:#6ab0e0;--pacifique:#c99f5f;--crit:#d07aa0;--crit-bg:#251a20`;
+    const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pacifique → Listuguj spelling review</title>
 <style>
- body{font-family:system-ui,sans-serif;margin:2em auto;max-width:920px;color:#222;line-height:1.5}
- h1{font-size:1.5em} .note{background:#f5f0e0;padding:1em 1.2em;border-radius:8px;color:#444}
- .tag{color:#fff;padding:1px 7px;border-radius:10px;font-size:.72em;white-space:nowrap}
- .sizing{margin:1.2em 0;font-size:.95em} .sizing td{padding:2px 14px 2px 0}
- .card{border:1px solid #e0dccc;border-radius:8px;padding:.9em 1.1em;margin:.7em 0;background:#fff}
- .card.crit{border-color:#d33682;background:#fdf6f9}
- .src{font-size:1.3em;font-weight:600;color:#586e75}
- .diff{margin:.3em 0;font-size:1.15em} .mm b{color:#dc322f} .gold b{color:#268bd2}
- .mm,.gold{font-weight:500} .arrow{color:#999;font-size:.8em;margin:0 .4em}
- .tags{margin:.4em 0} .lever{color:#666;font-size:.85em}
- .rules{color:#777;font-size:.82em;font-style:italic} .q{margin-top:.5em;font-size:.92em;color:#333}
- .verdict{margin-top:.3em;font-size:.8em;color:#2aa198}
-</style></head><body>
-<h1>Pacifique → Listuguj — error reading session (preliminary, machine-bucketed)</h1>
+ :root{${TOK_LIGHT}}
+ @media (prefers-color-scheme:dark){:root{${TOK_DARK}}}
+ :root[data-theme="dark"]{${TOK_DARK}} :root[data-theme="light"]{${TOK_LIGHT}}
+ *{box-sizing:border-box} html{-webkit-text-size-adjust:100%}
+ body{margin:0;background:var(--paper);color:var(--ink);line-height:1.55;
+   font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+ .wrap{max-width:820px;margin:0 auto;padding:2.6rem 1.3rem 5rem}
+ .word{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif}
+ h1{font-size:1.55rem;font-weight:600;letter-spacing:-.01em;text-wrap:balance;margin:0 0 .35rem}
+ .lead{color:var(--muted);font-size:.95rem;margin:0 0 1.7rem;max-width:60ch}
+ .note{background:var(--card);border:1px solid var(--line);border-radius:12px;
+   padding:1.05rem 1.3rem;margin:0 0 1.5rem;font-size:.92rem;max-width:64ch}
+ .note p{margin:.45rem 0} .note p:first-child{margin-top:0} .note p:last-child{margin-bottom:0}
+ .sizing{display:flex;flex-wrap:wrap;gap:.45rem;margin:0 0 .5rem;align-items:center}
+ .tag{color:#fff;padding:.08rem .52rem;border-radius:999px;font-size:.68rem;font-weight:600;
+   letter-spacing:.02em;white-space:nowrap;display:inline-block}
+ .count{font-variant-numeric:tabular-nums;color:var(--muted);font-size:.78rem;margin:0 .5rem 0 .18rem}
+ .buckets{font-size:.86rem;color:var(--muted);font-variant-numeric:tabular-nums;margin:.2rem 0 2rem}
+ .buckets b{color:var(--ink)} .buckets .sep{opacity:.4;margin:0 .5rem}
+ .card{background:var(--card);border:1px solid var(--line);border-radius:12px;
+   padding:1rem 1.2rem;margin:.65rem 0}
+ .card.crit{border-color:var(--crit)}
+ .form{display:flex;align-items:baseline;gap:.75rem;margin:.1rem 0}
+ .eyebrow{flex:0 0 4.6rem;font-size:.64rem;text-transform:uppercase;letter-spacing:.09em;
+   color:var(--muted);font-weight:700;text-align:right}
+ .form .val{font-size:1.3rem;line-height:1.3}
+ .form.src .val{color:var(--pacifique)} .form.gold .val{color:var(--accent)}
+ mark{background:none;font-weight:700} .form.auto mark{color:var(--crit)} .form.gold mark{color:var(--accent)}
+ .gap{display:inline-block;width:.34em;border-bottom:2px solid currentColor;opacity:.35;
+   margin:0 .03em;vertical-align:.16em}
+ .meta{display:flex;flex-wrap:wrap;align-items:center;gap:.35rem;margin-top:.65rem}
+ .lever{color:var(--muted);font-size:.76rem;margin-left:.15rem}
+ .rules{color:var(--muted);font-size:.77rem;font-style:italic;margin-top:.4rem}
+ .q{margin-top:.75rem;padding:.6rem .75rem;border-left:3px solid var(--crit);border-radius:0 7px 7px 0;
+   background:color-mix(in srgb,var(--crit) 8%,transparent);font-size:.86rem}
+ .blank{border-bottom:1px solid var(--muted);display:inline-block;min-width:8rem;height:1em}
+ .verdict{margin-top:.45rem;font-size:.78rem;color:var(--accent)}
+</style></head><body><div class="wrap">
+<h1>Pacifique → Listuguj — spelling reading</h1>
+<p class="lead">${cards.length} words where the automatic Pacifique-to-Listuguj spelling disagrees with the hand gold, grouped by the kind of difference. A first pass by the computer — your eyes only where marked.</p>
 <div class="note">
-<p><b>What this is.</b> The ${cards.length} holdout words where the automatic Pacifique→Listuguj
-rules disagree with the hand gold.  The machine has already grouped them by the KIND of
-difference; your job is only to <b>confirm or correct</b>, and only where marked
-<span class="tag" style="background:#d33682">expert</span>.</p>
-<p><b>You can stop anytime.</b> Unreviewed words keep the machine's guess.  Anything you mark is
-saved by word and survives when we improve the rules and regenerate this list — partial now, more
-later, both count.  The two questions that need you: (1) is a gold form a tidy
-<i>citation/dictionary</i> spelling rather than a faithful transcription of what Pacifique wrote?
-(2) where the machine looks simply wrong, what's the right Listuguj form?</p>
+<p><b>What to do.</b> Look at the cards outlined in <span style="color:var(--crit);font-weight:600">pink</span> — those are the ${critical} where the computer isn't sure. For each, one small question: is the gold a tidy dictionary form, or is the automatic guess simply wrong? The other cards the computer already handled.</p>
+<p><b>Stop whenever.</b> Anything you mark is saved by word and stays put when we improve the rules and rebuild this list — a few now and more later both count.</p>
 </div>
-<div class="sizing"><b>Preliminary sizing</b> (machine, no input needed):<table>
-<tr><td>phenomenon</td>${Object.entries(phenomCount).map(([k,v])=>`<td><span class="tag" style="background:${TAG_COLOR[k]}">${k}</span> ${v}</td>`).join('')}</tr>
-</table><table>
-${Object.entries(bucketCount).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td>${k}</td><td>${v}</td></tr>`).join('')}
-</table>${critical} of ${cards.length} need the gold reading.</div>
-<p>Legend: ${legend}</p>
+<div class="sizing">${Object.entries(phenomCount).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).map(([k,v])=>chip(k,v)).join('')}</div>
+<div class="buckets">${Object.entries(bucketCount).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<b>${v}</b> ${k}`).join('<span class="sep">·</span>')}<span class="sep">·</span><b>${critical}</b> need the gold reading</div>
 ${cardHtml}
-</body></html>`;
-    const htmlPath = new URL('../resources/pm-li-taxonomy.html', import.meta.url).pathname;
-    Deno.writeTextFileSync(htmlPath, html);
-    console.log(`\nwrote ${htmlPath}`);
-    console.log(`wrote ${dataPath} (machine data)`);
-    console.log(`verdicts (human, merged, never overwritten): ${verdictPath}`);
+</div></body></html>`;
+    Deno.writeTextFileSync(HTML_PATH, html);
+    return {holdout: hold.length, hits, misses: cards.length, critical, phenomCount, bucketCount, htmlPath: HTML_PATH};
+}
+
+// Standalone DEV entry: read a scratch corpus json (the CLI subcommand
+// build-pm-li-taxonomy is the pipeline path - it reads the db).
+function main() {
+    const corpusPath = Deno.args[0] ?? 'transliteration-pairs-pm-li.json';
+    const s = buildPmLiTaxonomy(JSON.parse(Deno.readTextFileSync(corpusPath)));
+    console.log(`pm-li holdout: ${s.holdout} pairs, ${s.hits} hits, ${s.misses} misses`);
+    for(const [k,v] of Object.entries(s.phenomCount).filter(([,v]) => v > 0).sort((a,b)=>b[1]-a[1]))
+        console.log(`  ${k.padEnd(13)} ${v}`);
+    console.log(`${s.critical} expert-critical → wrote ${s.htmlPath}`);
 }
 
 if(import.meta.main) main();

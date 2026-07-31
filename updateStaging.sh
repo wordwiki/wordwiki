@@ -57,12 +57,23 @@ echo "=== 2/4  git pull --ff-only on $STAGING_HOST:~/$STAGING_DIR ==="
 # systemd.md / the lockfile notes).
 ssh "$STAGING_HOST" "cd ~/$STAGING_DIR && git checkout -- deno.lock 2>/dev/null; git pull --ff-only"
 
-echo "=== 3/4  rsync db -> $STAGING_HOST:~/$STAGING_DIR/mmo/database/db.db ==="
-echo "         (from $DB)"
+echo "=== 3/4  rsync db + generated artifacts -> $STAGING_HOST:~/$STAGING_DIR ==="
+echo "         (db from $DB)"
 # The server is stopped, so drop any leftover WAL/SHM sidecars first - otherwise
 # a stale -wal could be replayed onto the freshly-copied db on next start.
 ssh "$STAGING_HOST" "rm -f ~/$STAGING_DIR/mmo/database/db.db-wal ~/$STAGING_DIR/mmo/database/db.db-shm"
 rsync -v "$DB" "$STAGING_HOST:$STAGING_DIR/mmo/database/db.db"
+# The pipeline-built REVIEW ARTIFACTS (resources/generated/) are GITIGNORED,
+# so git pull never carries them - ship them like the db (dz 2026-07-31).
+# --delete keeps staging's copy in step with dev's (all files here are
+# regenerable by importWordWikiV1Db.sh).  Trailing slashes: contents-of ->
+# into.  (The content-addressable derivation CACHE dirs still need the same
+# treatment - a separate TODO for the expensive LLM artifacts.)
+GEN="$WORDWIKI_SRC/resources/generated/"
+if [ -d "$GEN" ]; then
+    ssh "$STAGING_HOST" "mkdir -p ~/$STAGING_DIR/resources/generated"
+    rsync -av --delete "$GEN" "$STAGING_HOST:$STAGING_DIR/resources/generated/"
+fi
 
 echo "=== 4/4  start wordwiki on $STAGING_HOST ==="
 ssh "$STAGING_HOST" "$SC start wordwiki.service"
