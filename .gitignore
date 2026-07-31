@@ -49,3 +49,7 @@
 /drive.js
 /scihub.js
 /mikmaq-fetch-results/
+
+# pm-li taxonomy: regenerable machine outputs (generator + verdicts ARE committed)
+/mikmaq/pm-li-taxonomy-data.json
+/resources/pm-li-taxonomy.html

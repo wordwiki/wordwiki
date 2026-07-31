@@ -471,3 +471,51 @@ words); adds a second thing to measure.
   grades, transliteratedSkeletons blocking), the spec candidatePattern,
   the 3-pass similarity engine (blocking/judge/escalation), dialectSubs +
   cskel relaxations.  [[similarity-engine]] [[transliteration-pairs]]
+
+## 10. pm-li taxonomy — reading-session material BUILT (2026-07-31)
+
+Constraint (dz): the most expert reviewer is mid-chemo, low-energy short
+term, likely better in a few months.  So the material must (a) extract
+value with ZERO expert input now and (b) be LIVE-TUNABLE — re-run the
+derivation later to rebind, never big-bang.  Both met.
+
+Generator: **mikmaq/pm-li-taxonomy.ts** (re-run after ANY pm-li rule
+change to rebind).  Over the holdout misses it computes the aligned diff,
+multi-label tags each miss by PHENOMENON (each → a §4 lever), shows the
+FIRED RULES (explainPmToLi - the I4 payoff, so the expert sees WHY), and
+proposes a bucket.  Emits resources/pm-li-taxonomy.html (mailable review
+page, expert-critical cards first) + mikmaq/pm-li-taxonomy-data.json
+(machine layer, regenerable).  Human verdicts live in
+mikmaq/pm-li-taxonomy-verdicts.json, keyed by a CONTENT-KEYED id
+(hash of source+gold); the generator READS + MERGES them, never
+overwrites - VERIFIED: a verdict survives a full regeneration and shows in
+the HTML.  (data.json + html are gitignored regenerables; generator +
+verdicts are committed.)
+
+PRELIMINARY TAXONOMY (machine, no expert input) - 241 holdout, 72 hit,
+169 miss:
+- PHENOMENA (multi-label): length 86 (51%), glide 76, epenthesis 57,
+  uvular 47, suffix 18, vowel-quality 14, gloss-leak 11, palatal 0,
+  residual 26.
+- BUCKETS→lever: phonological 94 + length-only 26 = 120 (71%) →
+  levers 1/3; residual 26 + morph-suspect 8 = 34 EXPERT-CRITICAL (20%);
+  gloss-leak 11 + data → corpus cleaning.
+FINDINGS with zero expert input:
+1. LENGTH dominates (86/169) — confirms F1: lever 1 (match/ignore-length),
+   NOT a generation scorer.  The §4 verdict holds on real miss data.
+2. CORPUS NOISE is real and quantified: gloss-leak 11 (French source /
+   English gold the pdmRefCorpus filter missed: "en jurant→swearing/
+   cussing") + data 34 (spaces, slashes = multi-word/alt-form gold).
+   PREREQUISITE TASK (no expert): tighten pdmRefCorpus; improves the
+   measurement denominator before any lever work.
+3. Only 34 misses truly need the expert (residual + morph-suspect) - a
+   small, bounded set; the two questions are "is the gold a regularized
+   citation form?" and "where the machine's simply wrong, what's right?"
+4. palatal 0 = t→j already handled by the rules.
+WORKFLOW: the team opens the served page (/resources/pm-li-taxonomy.html),
+marks any cards they have energy for (resumable, partial counts), a future
+review UI (or hand-edit) writes verdicts.json by id; we re-run to rebind.
+NEXT (unblocked, no expert): (a) tighten pdmRefCorpus (gloss-leak/data);
+(b) the §4 lever build the taxonomy sizes biggest = MATCH permissiveness
+(length + uvular/glide equivalence) — 120/169 phonological, exactly what
+lever 1/3 addresses.  Expert refinement of the 34 rebinds whenever it comes.
