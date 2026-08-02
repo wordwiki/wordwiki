@@ -3,7 +3,7 @@ set -e
 
 # Sync the SHARED content-addressable store FROM staging onto ours.  This is
 # the one copy every dev instance symlinks to (see mmo-use-shared-content.sh);
-# the db pull (pullWordWikiV1Db.sh) deliberately does NOT touch it, so the big
+# the db snapshot (pullLiveSnapshot.sh, which also calls this) is separate, so the big
 # store is fetched here and reused across all checkouts.
 #
 # The WHOLE store ships - content/ (interned media), derived/ (generated
