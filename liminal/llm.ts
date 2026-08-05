@@ -69,26 +69,39 @@ export const EXTRACT_TOOL_NAME = 'record_extraction';
  * "extraction unavailable" rather than a crash.  `fetchImpl` is injectable for tests.
  */
 export function loadLlm(appName: string, fetchImpl: typeof fetch = fetch): Llm {
+    const cred = loadAnthropicCredential(appName);
+    if(cred instanceof Error)
+        return new DisabledLlm(cred.message);
+    console.info(`llm: Anthropic client configured (default model ${cred.defaultModel ?? 'unset'})`);
+    return new AnthropicLlm(cred, fetchImpl);
+}
+
+/**
+ * Read + validate `<appName>-anthropic-credential.json` from the run dir.
+ * Returns an Error (never throws) describing why it's unusable - shared by
+ * the sync client above and the batch backend (batch-backend-anthropic.ts),
+ * which needs the raw credential rather than an Llm.
+ */
+export function loadAnthropicCredential(appName: string): AnthropicCredential|Error {
     const file = `${appName}-anthropic-credential.json`;
     let raw: string;
     try {
         raw = Deno.readTextFileSync(file);
     } catch {
-        return new DisabledLlm(`no ${file}`);
+        return new Error(`no ${file}`);
     }
     let cred: AnthropicCredential;
     try {
         cred = JSON.parse(raw);
     } catch (e) {
         console.error(`llm: ${file} is not valid JSON (${e}); extraction disabled`);
-        return new DisabledLlm(`unparseable ${file}`);
+        return new Error(`unparseable ${file}`);
     }
     if(typeof cred.apiKey !== 'string' || cred.apiKey === '') {
         console.error(`llm: ${file} is missing apiKey; extraction disabled`);
-        return new DisabledLlm(`incomplete ${file}`);
+        return new Error(`incomplete ${file}`);
     }
-    console.info(`llm: Anthropic client configured (default model ${cred.defaultModel ?? 'unset'})`);
-    return new AnthropicLlm(cred, fetchImpl);
+    return cred;
 }
 
 // ---------------------------------------------------------------------------------
