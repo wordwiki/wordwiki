@@ -54,6 +54,3 @@
 
 # Pipeline-built review artifacts (rsync to staging, never committed).
 /resources/generated/
-
-# Temporary per-thread handoff notes for a future (post-compact) claude.
-/future-steps/

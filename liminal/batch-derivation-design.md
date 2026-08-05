@@ -213,6 +213,47 @@ is the PRIMARY mode, not a crash fallback.
 3. commit-at-end (keeps reruns safe).
 Get these right and the rest is bookkeeping.
 
+## 12b. Migrating an existing SYNC step to BATCH without re-spend (dz 2026-08-05)
+
+New requirement: steps we already ran NON-BATCH (results cached, PAID) will
+be RE-RUN as batch after the code change.  Their existing responses MUST be
+reused — under the AI-ban, the migrated import must run CLEAN (zero AI).
+
+Why it's mostly already handled: getDerived separates the KEY (hash of the
+`closure` = [fnName, ...args]) from the IMPL (looked up by name in the
+per-call `fns` map).  So swapping syncImpl -> batchImpl PROVABLY cannot
+change the key, and an existing sync-produced result is reused by the batch
+path for free.  The batch store additions (pending peer-files at new
+suffixes, in-process memoization) are ADDITIVE — they never touch existing
+done-files, so nothing is re-keyed by the store change itself.
+
+The real risk: the RETROFIT (throw discipline, enroll-before-await,
+commit-at-end) restructures each pass, and a refactor could accidentally
+change the `closure` (recompute input, rename fn, rebundle args) -> orphan
+the cached result -> under the ban, a hit becomes a miss.
+
+STRUCTURAL FIX — factor the key out of the impl choice: for each AI
+derivation, extract `derivationKey(input) -> [fnName, ...args]` into ONE
+shared function that BOTH the sync and batch call sites use verbatim.  Then
+the two paths cannot drift; sync-vs-batch is ONLY which fn the wrapper puts
+in the map.  Key-preservation becomes a property of the code structure, not
+the refactorer's care.
+
+ACCEPTANCE GATE = the ban-run: `touch no-llm-calls`, run the batch-migrated
+import.  Every cached derivation is a hit (impl never runs); ANY drifted key
+misses -> batchImpl tries to ENROLL -> enrollment is an AI call -> the ban
+throws, naming the model + prompt.  A clean run PROVES zero existing
+responses were orphaned.  IMPLEMENTATION NOTE: assertLlmCallsAllowed() must
+fire at the ENROLLMENT point in batchImpl (before it writes a pending
+marker), not only at flush — so a drifted key trips immediately and names
+itself, exactly like the sync path.
+
+CORRECTNESS (not just cost): a drifted key would silently produce a
+DIFFERENT LLM answer (batch bytes != sync bytes; non-determinism).  Reuse is
+correct precisely because a hit never re-derives.  A DELIBERATE semantic
+change (fix input canonicalization, bump a prompt) SHOULD re-derive — a
+paid, deliberate op done WITHOUT the ban, never aliased over.
+
 ## 12. Testing plan
 
 This is the first mechanism whose correctness spans MULTIPLE PROCESS
