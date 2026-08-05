@@ -4,6 +4,25 @@
 - TAKEN 2026-08-05 by claude (dz's main container, session w/ dz live) —
   building in the §9/FIRST-MOVE order: memoization → fake backend + Tier-1
   harness → BatchContext/batchImpl → driver → pilot retrofit.
+- BUILT 2026-08-05 (same session, commits 47d2bf1..0a9c1ad):
+  1. getDerived promise memoization (content-store.ts) + tests.
+  2. BatchBackend interface + disk-persisted FakeBatchBackend +
+     AnthropicBatchBackend (batch-backend.ts / batch-backend-anthropic.ts).
+  3. The core (batch-derivation.ts): DerivationNotAvailable, pending
+     peer-files, BatchContext (enroll w/ ban-assert, single flush,
+     list-and-reconnect, conservative defer, capped retries), batchImplFor,
+     awaitAll, runBatchUnits + classifyBatchRun.
+  4. extract.ts: ExtractConfig.batch selects the impl under the SAME closure
+     (keystone 0); interactive callers untouched.
+  5. Tier-1 §12.1 matrix GREEN (batch-derivation_test.ts + the
+     testing/batch-pass-cli.ts subprocess harness; <1s, incl. real-process
+     crash injection at both windows).
+  6. PILOT: bind-references --batch (deferred pages, flush, exit 3 = rerun
+     later).  §12b BAN-RUN acceptance gate PASSED (rebuildDerived clean
+     under no-llm-calls, binding numbers byte-identical - zero orphaned keys).
+- REMAINING: Tier-2 real-API soak (§12.2 - the pre-production acceptance
+  activity, needs a few days' wall clock + a tiny spend) before the first
+  big paid batch run; then retrofit the PDM stages (depth-4) the same way.
 
 ## What / why
 Route the BULK pipeline AI passes (Phase 3: PDM segment/read/split/
