@@ -223,15 +223,15 @@ export class FakeBatchBackend implements BatchBackend {
 
     private async loadAll(): Promise<FakeBatchFile[]> {
         const out: FakeBatchFile[] = [];
-        let entries;
         try {
-            entries = Deno.readDir(this.stateDir);
-        } catch {
-            return out;                            // no state dir yet: no batches
+            // NB: readDir throws lazily, inside the iteration - the whole
+            // loop is in the try so a missing state dir means "no batches".
+            for await (const e of Deno.readDir(this.stateDir))
+                if(e.isFile && e.name.endsWith('.json'))
+                    out.push(JSON.parse(await Deno.readTextFile(posix.join(this.stateDir, e.name))));
+        } catch (e) {
+            if(!(e instanceof Deno.errors.NotFound)) throw e;
         }
-        for await (const e of entries)
-            if(e.isFile && e.name.endsWith('.json'))
-                out.push(JSON.parse(await Deno.readTextFile(posix.join(this.stateDir, e.name))));
         return out;
     }
 }

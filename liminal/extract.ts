@@ -15,8 +15,9 @@
 // uses this directly as a read-through derived attribute; the flow (jobs, review,
 // filing) is Layer 2 and lives in the app.
 import * as posix from "https://deno.land/std@0.195.0/path/posix.ts";
-import { getDerived, hasDerived } from "./content-store.ts";
-import { Llm, LlmUsage } from "./llm.ts";
+import { getDerived, hasDerived, derivedContentAddress } from "./content-store.ts";
+import { Llm, LlmUsage, LlmImage, buildAnthropicRequest, extractToolResult } from "./llm.ts";
+import { BatchContext, batchImplFor } from "./batch-derivation.ts";
 
 // ---------------------------------------------------------------------------------
 // --- Recipe + config --------------------------------------------------------------
@@ -52,8 +53,16 @@ export interface ExtractConfig {
     image: ExtractImageSource;    // usually the app's PhotoService
     llm: Llm;                     // usually loadLlm(appName)
     // Cost accounting: called per ACTUAL API call (cache hits are free and
-    // never fire this) with the stage name and the API usage block.
+    // never fire this) with the stage name and the API usage block.  In batch
+    // mode it fires at result LANDING time (the run that consumes the result).
     onUsage?: (stageName: string, usage: LlmUsage) => void;
+    // BATCH MODE (batch-derivation-design.md): when set, a cache MISS enrolls
+    // into this context and throws DerivationNotAvailable instead of calling
+    // the synchronous API; a HIT is served identically either way.  The
+    // CLOSURE/KEY is the same in both modes (stageClosure computes it once,
+    // before the impl choice - keystone 0), so cached sync results serve
+    // batch runs and vice versa.  Interactive callers just leave this unset.
+    batch?: BatchContext;
 }
 
 export const DEFAULT_IMAGE_BOX = 1600;
@@ -94,15 +103,12 @@ export async function extractStageCached(cfg: ExtractConfig, photoPath: string,
 export async function extractTextStage(cfg: ExtractConfig, stage: ExtractStage,
                                        input: unknown): Promise<unknown> {
     const inputHash = await digestString(JSON.stringify(input ?? null));
+    const closure = ['extract-text', stage.model, stage.promptVersion, stage.name, inputHash];
     const contentId = await getDerived(
         `${cfg.derivedDir}/extractions`,
-        { 'extract-text': async (_target: string) => {
-            const raw = await cfg.llm.extract(stage.model, stage.prompt(input),
-                                              undefined, stage.schema,
-                                              {onUsage: u => cfg.onUsage?.(stage.name, u)});
-            return JSON.stringify(validateExtraction(stage.schema, raw));
-        }},
-        ['extract-text', stage.model, stage.promptVersion, stage.name, inputHash],
+        { 'extract-text': await stageImpl(cfg, stage, closure, async () => undefined,
+                                          () => stage.prompt(input)) },
+        closure,
         'json');
     return JSON.parse(await readDerived(cfg.derivedDir, contentId));
 }
@@ -110,21 +116,63 @@ export async function extractTextStage(cfg: ExtractConfig, stage: ExtractStage,
 export async function extractStage(cfg: ExtractConfig, photoPath: string, rotate: number,
                                    stage: ExtractStage, input: unknown): Promise<unknown> {
     const box = stage.imageBox || DEFAULT_IMAGE_BOX;
+    const closure = await stageClosure(photoPath, rotate, stage, input);
     const contentId = await getDerived(
         `${cfg.derivedDir}/extractions`,
-        { extract: async (_target: string) => {
+        { extract: await stageImpl(cfg, stage, closure, async () => {
             // rotate-FIRST, then contain to `box` (never crop for the LLM) - both via the
             // existing contained-photo derivation, itself cached & content-addressed.
             const jpeg = await cfg.image.containedBytes(photoPath, box, box, rotate);
-            const raw = await cfg.llm.extract(stage.model, stage.prompt(input),
-                                              {bytes: jpeg, mediaType: 'image/jpeg'}, stage.schema,
-                                              {onUsage: u => cfg.onUsage?.(stage.name, u)});
-            // A string return is written to the .json file by getDerived.
-            return JSON.stringify(validateExtraction(stage.schema, raw));
-        }},
-        await stageClosure(photoPath, rotate, stage, input),
+            return {bytes: jpeg, mediaType: 'image/jpeg'} as LlmImage;
+        }, () => stage.prompt(input)) },
+        closure,
         'json');
     return JSON.parse(await readDerived(cfg.derivedDir, contentId));
+}
+
+// ---------------------------------------------------------------------------------
+// --- The per-stage impl: sync or batch under the SAME closure ----------------------
+// ---------------------------------------------------------------------------------
+
+// Build the fn getDerived runs on a MISS.  The CLOSURE is computed by the
+// caller before this choice, so sync and batch provably share the key
+// (batch-derivation-design.md keystone 0/§12b); this only selects WHAT runs
+// on a miss:
+//   - sync (no cfg.batch): call the live API via cfg.llm, as always.
+//   - batch: resolve against the BatchContext - a landed batch result is
+//     post-processed IDENTICALLY to a live response (extractToolResult ->
+//     validate -> stringify, so batch bytes == sync bytes); otherwise the
+//     request (the same buildAnthropicRequest body the sync client sends)
+//     is enrolled and DerivationNotAvailable propagates to the pass's top
+//     loop.  `makeImage` runs only when a request is actually built.
+async function stageImpl(cfg: ExtractConfig, stage: ExtractStage, closure: any[],
+                         makeImage: () => Promise<LlmImage|undefined>,
+                         makePrompt: () => string):
+        Promise<(target: string) => Promise<string>> {
+    if(cfg.batch === undefined)
+        return async (_target: string) => {
+            const raw = await cfg.llm.extract(stage.model, makePrompt(),
+                                              await makeImage(), stage.schema,
+                                              {onUsage: u => cfg.onUsage?.(stage.name, u)});
+            return JSON.stringify(validateExtraction(stage.schema, raw));
+        };
+    if(stage.model === '')
+        throw new Error(`extract stage '${stage.name}': batch mode needs an explicit model ` +
+                        `(no defaultModel fallback in a batch request)`);
+    const address = await derivedContentAddress(`${cfg.derivedDir}/extractions`, closure, 'json');
+    return batchImplFor(
+        cfg.batch,
+        address,
+        async () => buildAnthropicRequest(stage.model, makePrompt(),
+                                          await makeImage(), stage.schema),
+        message => {
+            const raw = extractToolResult(message);
+            const u = (message as {usage?: {input_tokens?: number, output_tokens?: number}}).usage;
+            if(u && cfg.onUsage)
+                cfg.onUsage(stage.name, {inputTokens: u.input_tokens ?? 0,
+                                         outputTokens: u.output_tokens ?? 0});
+            return JSON.stringify(validateExtraction(stage.schema, raw));
+        });
 }
 
 // Run a whole recipe over one image; each stage cached independently.

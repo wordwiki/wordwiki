@@ -153,17 +153,31 @@ contentStorePlay();
 /**
  *
  */
+/** The derived-content ADDRESS for a closure: THE key computation, in one
+ *  place.  hash = sha256 of the closure JSON - the identity the whole batch
+ *  design leans on (custom_id = this hash; pending peer-files sit beside
+ *  contentPath).  Exported so the batch layer (batch-derivation.ts) addresses
+ *  the same key WITHOUT reimplementing it - key-preservation as code
+ *  structure (batch-derivation-design.md §12b). */
+export async function derivedContentAddress(contentStorePath: string,
+                                            closure: any[],
+                                            extension: string):
+        Promise<{contentId: string, contentPath: string, hash: string}> {
+    const contentStoreParent = posix.dirname(contentStorePath);
+    const contentStore = posix.basename(contentStorePath);
+    const hash = await digestString(JSON.stringify(closure, undefined, '  '));
+    const contentId = formatContentId({contentStore, hash, extension});
+    return {contentId, contentPath: posix.join(contentStoreParent, contentId), hash};
+}
+
 /** Is the derivation for `closure` already in the store?  The same key
  *  computation as getDerived, no side effects - lets a caller run in
  *  CACHED-ONLY mode (use what exists, never compute). */
 export async function hasDerived(contentStorePath: string,
                                  closure: any[],
                                  extension: string): Promise<boolean> {
-    const contentStoreParent = posix.dirname(contentStorePath);
-    const contentStore = posix.basename(contentStorePath);
-    const hash = await digestString(JSON.stringify(closure, undefined, '  '));
-    const outputContentId = formatContentId({contentStore, hash, extension});
-    return await fs.exists(posix.join(contentStoreParent, outputContentId));
+    const {contentPath} = await derivedContentAddress(contentStorePath, closure, extension);
+    return await fs.exists(contentPath);
 }
 
 // --- IN-PROCESS derivation memoization (batch-derivation-design.md §4).
@@ -181,17 +195,9 @@ export async function getDerived(contentStorePath: string,
                           closure: any[],
                           extension: string):Promise<string> {
 
-    // --- Extract content store parent and name from contentStorePath
-    const contentStoreParent = posix.dirname(contentStorePath);
-    const contentStore = posix.basename(contentStorePath);
-
-    // --- Serialize closure to JSON and compute hash
-    const closureJson = JSON.stringify(closure, undefined, '  ');
-    const hash = await digestString(closureJson);
-
-    // --- Compute filename for closure output
-    const outputContentId = formatContentId({contentStore, hash, extension});
-    const outputContentPath = posix.join(contentStoreParent, outputContentId);
+    // --- Compute the derived-content address (THE key computation)
+    const {contentId: outputContentId, contentPath: outputContentPath} =
+        await derivedContentAddress(contentStorePath, closure, extension);
 
     // --- Share an in-flight derivation of the same key (no await between
     //     this check and the set below, so the check-then-act is safe on the
