@@ -15,6 +15,9 @@ set -e
 WORDWIKI_SRC="$(cd "$(dirname "$0")" && pwd)"
 
 # 1. Shared Claude memory.
+# Note that inside the 'pj' containers we usually develop inside, this command
+# is not available - but it is also not neccessary, the 'pj' container system
+# does the same thing with container dir redirects.
 if command -v claude-memlink >/dev/null 2>&1; then
     claude-memlink "$WORDWIKI_SRC"
 else
