@@ -193,3 +193,98 @@ is the PRIMARY mode, not a crash fallback.
 2. per-run batch scope with enroll-before-await (preserves the depth bound).
 3. commit-at-end (keeps reruns safe).
 Get these right and the rest is bookkeeping.
+
+## 12. Testing plan
+
+This is the first mechanism whose correctness spans MULTIPLE PROCESS
+INVOCATIONS with PERSISTENT INTERMEDIATE STATE, and whose real run takes
+(dependency depth) x ~24h — days.  The plan splits along that fault line:
+almost all the hard LOGIC is deterministic and testable in seconds against a
+FAKE backend; only the REAL-API integration + timing needs the multi-day
+soak.  Both tiers run the SAME driver/pass code via a swappable backend
+interface — the only difference is which backend and who controls the clock.
+
+### 12.1 Tier 1 — fast, deterministic, FAKE batch backend (the primary net, CI)
+
+The batch client is an INTERFACE; a FakeBatchBackend implements
+create/retrieve/results/list with a CONTROLLED clock and programmable
+per-request outcomes (succeed / error / expire, and "not done yet until I
+say").  This turns "multiple runs over days" into "multiple invocations
+against a fake we complete on command" — the whole hard path runs in
+seconds.
+
+FIDELITY: drive REAL SUBPROCESS invocations against a temp content-store dir
+(the fake persists its own batch state to disk too), so "crash" is a genuine
+process kill and "resume" is a genuine cold reconnect — not just cleared
+in-process state.  This matches [[testing-approach]]'s fakes/in-memory
+philosophy but adds the cross-invocation dimension our other tests lack.
+
+Matrix (all fast):
+- DEPTH-N chain: synthetic derivations A->B->C->D; assert completion in
+  EXACTLY N flush cycles (proves the depth bound + automatic level
+  discovery), and that all same-level requests share ONE batch (no
+  cross-level serialization).
+- FAN-OUT: M independent requests enroll into one batch in one run.
+- ENROLL-BEFORE-AWAIT: assert the depth bound holds under the discipline and
+  DEGRADES (toward count x cycles) without it - so the test pins the
+  requirement, not just the happy path.
+- CRASH injection at each window (before flush / after submit before marker /
+  mid-poll / after some results landed): kill + reinvoke; assert (a) eventual
+  completion, (b) NO double-submit (count backend.create calls), (c) NO lost
+  work, (d) NO double-SPEND (the money-correctness property).
+- MARKER LOSS: delete a pending marker; assert list-and-reconnect recovers
+  (lands by custom_id), no resubmit.
+- PARTIAL FAILURE: fake errors/expires some requests; assert succeeded land,
+  failed stay cache-miss + retry next run, no crash.
+- IDEMPOTENT LANDING: same custom_id result landed twice = no-op.
+- NO-AI FLAG: after a priming run, a flagged invocation makes ZERO
+  backend.create calls (assert on the fake); a flagged invocation with a
+  MISS throws.
+- INTERACTIVE ISOLATION: an interactive-mode call (no batch context)
+  interleaved in the same process calls the backend SYNCHRONOUSLY and does
+  NOT enroll - proving the scoped (not global) context.
+- TERMINATION: a zero-throw run reports done; a pure-wait run reschedules
+  without spinning.
+
+This tier OWNS correctness of the scheduling / resume / dedup logic.
+
+### 12.2 Tier 2 — the multi-day SOAK, REAL Batches API (acceptance gate)
+
+Purpose: validate ONLY what the fake can't — real submit/poll/results
+shapes, custom_id round-trip, real partial failures, real list-batches
+reconnect, real timing.  NOT to re-test the logic.
+
+Because a cycle is ~24h, PACK EVERY SCENARIO INTO ONE SOAK so total wall
+time = max scenario depth x ~24h (a few days), NOT the sum — every
+scenario's current-frontier requests ride the SAME batches.  Use trivial
+deterministic prompts (the content is irrelevant; keep spend tiny and
+results checkable).
+
+Scenarios in the one soak:
+- a DEPTH-3 chain (real cross-batch dependency scheduling over real days).
+- a wide FAN-OUT (real large-batch submit/retrieve).
+- a request built to ERROR (bad params) [+ an expire case if feasible] -
+  real partial-failure landing.
+- ONE real CRASH-RESUME: a chosen invocation exits after submit, before the
+  marker (test hook, e.g. CRASH_AFTER=submit); a later invocation must
+  reconnect via list-batches by custom_id - proves the REAL reconnect path.
+- the NO-AI-FLAG proof at the end: once everything's landed, a flagged full
+  run makes zero real API calls.
+
+DRIVER: a scheduled re-invocation (systemd timer / cron, hourly or on
+batch-completion) that runs the pass, flushes, appends a per-scenario line to
+a soak report (state + timestamp + running spend), and exits - unattended
+over the days.  A final assert-terminals invocation checks every scenario hit
+its expected terminal AND that total real spend equals the minimum (the
+no-double-spend property, end to end).
+
+Run the soak (a) once before first production use, (b) after any change to
+the batch client / driver / store batch paths.  It is the FEATURE ACCEPTANCE
+GATE, not a per-commit test.
+
+### 12.3 Deliverables (part of the §9 build)
+
+The FakeBatchBackend, the subprocess test harness (temp store + kill/reinvoke
++ assertions), and the soak driver + report are themselves things to build
+alongside the feature - budget them.  Tier 1 exercises the exact code Tier 2
+soaks, so a green Tier 1 + a clean multi-day soak is the ship criterion.
