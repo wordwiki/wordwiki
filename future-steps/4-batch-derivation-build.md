@@ -20,9 +20,20 @@
   6. PILOT: bind-references --batch (deferred pages, flush, exit 3 = rerun
      later).  §12b BAN-RUN acceptance gate PASSED (rebuildDerived clean
      under no-llm-calls, binding numbers byte-identical - zero orphaned keys).
-- REMAINING: Tier-2 real-API soak (§12.2 - the pre-production acceptance
-  activity, needs a few days' wall clock + a tiny spend) before the first
-  big paid batch run; then retrofit the PDM stages (depth-4) the same way.
+- TIER-2 SOAK PASSED 2026-08-05 (batch-soak.sh / liminal/testing/batch-soak.ts;
+  report tmp/batch-soak/): 3 hourly runs, 2+1 real batches, ~33.7k in/1.9k out
+  haiku tokens (~3c).  All 9 terminal assertions green: depth-3 chains in
+  exactly 3 cycles; 40-request fan-out; the injected after-submit crash run's
+  orphan batch recovered by LIST-AND-RECONNECT (43 results landed by custom_id
+  from a batch no marker knew, NO double-submit - recorded batches at the
+  minimum); real per-request errored landing + retry cap; the flagged
+  (LIMINAL_NO_LLM=1) full pass served entirely from cache with the err unit
+  failing at the cap WITHOUT enrolling.  THE FEATURE IS PRODUCTION-READY.
+  Rerun the soak after any change to the batch client/driver/store paths.
+- REMAINING: retrofit the PDM stages (depth-4 - where the depth x 24h bound
+  really pays) the same way as the binder pilot; then the deferred big jobs
+  (full rand binder, full-band judge, full-book PDM) can ride batch at half
+  price - still gated on dz's explicit go + quote (deferred-llm-runs.md).
 
 ## What / why
 Route the BULK pipeline AI passes (Phase 3: PDM segment/read/split/

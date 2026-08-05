@@ -17,7 +17,8 @@ What exists:
 - Tier-1 §12.1 matrix GREEN in <1s: liminal/batch-derivation_test.ts + testing/batch-pass-cli.ts (REAL subprocess kill/reinvoke; depth-3 chain in exactly 3 flush cycles, crash injection both windows via LIMINAL_BATCH_CRASH, marker loss, partial failure, no-AI gate, interactive isolation...).
 - PILOT: `bind-references --batch` (deferred page outcome, flush after the page loop, exit 3 = in flight, rerun same command to land). §12b BAN-RUN acceptance gate PASSED: rebuildDerived clean under no-llm-calls post-refactor, binding numbers byte-identical → zero paid keys orphaned.
 
-REMAINING before the first big paid batch run:
-- Tier-2 real-API SOAK (design §12.2): a few days' wall clock, tiny spend, packs all scenarios into one soak. The feature-acceptance gate — run it once before production batch use.
-- Retrofit the PDM stages (depth ~4 — where the depth×24h bound really pays) the same way; pdm passes go through the same extract.ts choke point.
-- The big deferred jobs ([[deferred-llm-runs]]) should be run THROUGH this at half price once soaked — still need dz's explicit go + quote.
+Tier-2 real-API SOAK (design §12.2) PASSED 2026-08-05 — batch-soak.sh + liminal/testing/batch-soak.ts, 3 hourly runs, 2+1 real batches, ~3¢: depth-3 chains in exactly 3 cycles, 40-wide fan-out, injected after-submit crash recovered by list-and-reconnect (43 results landed by custom_id from a marker-less orphan batch, NO double-submit), real per-request errored landing + retry cap, flagged full pass pure-cache. **PRODUCTION-READY.** Rerun the soak after any change to the batch client/driver/store paths (./batch-soak.sh reset, then loop).
+
+Remaining:
+- Retrofit the PDM stages (depth ~4 — where the depth×24h bound really pays) the same way as the binder pilot; pdm passes go through the same extract.ts choke point.
+- The big deferred jobs ([[deferred-llm-runs]]) should ride batch at half price — still need dz's explicit go + quote.
