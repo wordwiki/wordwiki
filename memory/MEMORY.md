@@ -54,4 +54,4 @@
 - [Wordwiki SAAS goal](wordwiki-saas-goal.md) — LONG-TERM: free open-source SAAS for language groups; tenancy = instance dir (exit = copy it), hosted customization DATA-ONLY (no tenant JS), migrations automatic at boot; survey §2.9
 - [Offline fork + merge](offline-fork-merge.md) — FUTURE: fork the SQLite db to a laptop, merge back via assertion HISTORIES; conflicts = pending assertions in the change approver (review UI is the merge UI); multi-db = the fork's landing pad
 - [Rebuild pipeline](rebuild-pipeline.md) — 4-phase pull/migrate/derive/push; clean repo → working system in one command (rebuildAll.sh); each phase reruns on its own trigger; no-AI-proof + union store ship
-- [Batch derivation](batch-derivation.md) — DESIGN (not built): batch bulk AI calls through the derived content store; throw-on-unavailable (Suspense) scheduling, custom_id=hash, interactive stays synchronous; doc liminal/batch-derivation-design.md
+- [Batch derivation](batch-derivation.md) — BUILT 2026-08-05: bulk AI batched through the derived store (50% off), Tier-1 green + ban-run gate passed, pilot bind-references --batch; Tier-2 soak remains before first big paid run
