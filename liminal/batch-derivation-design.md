@@ -21,44 +21,59 @@ submit-and-exit-then-resume shape and schedules the maximum work per run.
 DECISION (dz): the INTERACTIVE editor AI (auto-transliterate, etc.) stays on
 the SYNCHRONOUS (non-batched) API.  Only the bulk passes batch.
 
-## 2. Core principle — batching is a MODE of the store, not a property of the closure
+## 2. Core principle — same KEY, different IMPLEMENTATION (never a new key)
 
-The same getDerived closures serve both paths; behaviour depends only on
-whether a BATCH CONTEXT is active in the current execution:
-- interactive (no context): synchronous call / cache hit, exactly as today.
-- bulk pass (context active): the closure's AI call ENROLLS into the batch,
-  defers, and throws-if-awaited (§4).
+getDerived keys a derivation by `hash(JSON([fnName, ...args]))` (the
+closure), and looks the fn up BY NAME in a `fns` map passed PER CALL
+(content-store.ts).  So the fn identity in the key is the NAME STRING, not
+the fn's code, and the SAME name can map to a DIFFERENT implementation on
+different calls.  That is the whole mechanism:
 
-Consequences:
-- ONE set of AI derivations, not an interactive vs batch fork.
-- SHARED cache: interactive results prime the bulk cache and vice versa
-  (same content-hash slots); the split is only how a MISS is satisfied
-  (call now vs enroll), never where results live.
-- The editor code is UNCHANGED; the throw discipline (§5) lives only in the
-  bulk passes.
-- The batch context MUST be explicitly scoped to the bulk pass (passed down
-  / async-local), NEVER a module-global flag.  Today bulk runs offline in
-  the CLI with the server stopped (Phase 3 refuses a live pidfile) and
-  interactive runs in the server, so they are process-isolated and the
-  scoping is free.  A global boolean would break if a future staff-triggered
-  "re-derive this group" button ran inside the live server, sweeping a
-  concurrent editor request into a 24h batch.  Scoped context keeps
-  interactive synchronous even then.
+- MONEY-SAFETY (the hard constraint, dz 2026-08-05): the batch flag must
+  NEVER enter the closure/args.  This project has already spent real,
+  scarce money priming the derived store; an extra closure arg would change
+  the hash, orphan every paid result, and force a re-spend.  Batch-ness
+  lives ONLY in which implementation the wrapper selects — never in the key.
+- The wrapper functions (the app-level AI passes) take the batch param and
+  hand getDerived the SAME closure `[fnName, ...args]` but a different
+  `fns` map: `{fnName: syncImpl}` for interactive, `{fnName: batchImpl}` for
+  bulk.  Identical closure -> identical key.  So:
+  - existing paid entries are UNTOUCHED and still hit, for sync AND batch;
+  - new batch-computed results land in the SAME slot -> SHARED cache (a
+    batched result later serves an interactive call, and vice versa);
+  - the ONLY difference is which impl runs on a MISS.
+- Prefer SAME NAME over a different name for batch: a different name would
+  still be money-safe on the old cache but would forfeit sharing and risk
+  paying twice for the same input.  batch and sync produce the identical
+  result, so share the slot.
+- No ambient/global "mode": the bulk driver creates a BatchContext and the
+  wrapper CLOSES IT INTO the batchImpl it passes down; interactive callers
+  pass no context -> syncImpl.  Sync-vs-batch is an explicit per-call choice
+  threaded as data, so interactive isolation is automatic (nothing ambient
+  can sweep an editor call into a batch) and the editor code is unchanged.
 
 ## 3. Mechanism
 
-### 3.1 Deferred enrollment (derive-fn shape unchanged)
+### 3.1 The batchImpl (selected by the wrapper; same key as syncImpl)
 
-Inside a derive closure the AI call goes through a BATCH-AWARE client.  When
-a batch context is active AND it's a cache miss: enroll the request
-(custom_id = the derivation's content hash), persist a pending marker,
-return a DEFERRED promise, and do NOT call the API.  The batch flushes ONCE
-at the barrier (end of the run/pass): submit all enrolled requests as one
-batch, persist the batch id onto each participating key's pending marker.  A
-poller resolves the deferred promises as results land.
+On a MISS, getDerived runs the impl the wrapper supplied under the name.  The
+batchImpl (which closes over the pass's BatchContext) does NOT call the API:
+- if this key's result has already LANDED (the batch completed on an earlier
+  run) -> return it; getDerived writes it under the shared key, done.
+- else -> ENROLL the request into the BatchContext (custom_id = the
+  derivation's content hash), persist/refresh a PENDING peer-file, and THROW
+  NotAvailable.  getDerived writes only AFTER the impl returns, so the throw
+  propagates with no partial file (content-store.ts:216+).
+Re-enrollment is idempotent: on later runs the batchImpl sees the pending
+peer-file (or reconnects, §7) and just throws again until the result lands.
 
-So the derive fn stays `async (input) => output` — batching is hidden in the
-client + context, NOT by splitting the fn into request-builder/result-parser.
+The BatchContext flushes ONCE at the barrier (end of the run/pass): submit
+all enrolled requests as one batch, persist the batch id onto each
+participating key's pending peer-file.
+
+getDerived's KEY logic and done-file gate are UNCHANGED; the only new
+behaviour is tolerating an impl that throws NotAvailable (which it already
+does — the throw just rejects the promise before the write).
 
 ### 3.2 custom_id = content hash (the keystone)
 
@@ -187,8 +202,12 @@ is the PRIMARY mode, not a crash fallback.
   level-discovery is what a depth-4 pipeline wants; hand-staging is more
   error-prone.
 
-## 11. Three keystones to hold onto
+## 11. Four keystones to hold onto
 
+0. SAME KEY, different impl: the batch flag NEVER enters the closure/args;
+   the wrapper selects syncImpl vs batchImpl under the SAME name via the
+   `fns` map.  Preserves all prior (paid) cache AND shares it.  [the
+   money-safety property — §2]
 1. custom_id = content hash (idempotent landing, robust crash recovery).
 2. per-run batch scope with enroll-before-await (preserves the depth bound).
 3. commit-at-end (keeps reruns safe).
