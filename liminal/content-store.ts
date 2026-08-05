@@ -166,6 +166,16 @@ export async function hasDerived(contentStorePath: string,
     return await fs.exists(posix.join(contentStoreParent, outputContentId));
 }
 
+// --- IN-PROCESS derivation memoization (batch-derivation-design.md §4).
+//     Two concurrent requests for the same in-flight closure share ONE
+//     execution instead of both running the (possibly expensive - for AI,
+//     PAID) generation.  Keyed by the full output path (store + hash +
+//     extension); entries are removed when the derivation settles, so a
+//     FAILED derivation can be retried and a succeeded one is served by the
+//     ordinary done-file check.  The atomic-install race handling below
+//     stays: it still guards SEPARATE PROCESSES deriving the same key.
+const inFlightDerivations = new Map<string, Promise<string>>();
+
 export async function getDerived(contentStorePath: string,
                           fns: {[fnName: string]: Function},
                           closure: any[],
@@ -182,7 +192,29 @@ export async function getDerived(contentStorePath: string,
     // --- Compute filename for closure output
     const outputContentId = formatContentId({contentStore, hash, extension});
     const outputContentPath = posix.join(contentStoreParent, outputContentId);
-    
+
+    // --- Share an in-flight derivation of the same key (no await between
+    //     this check and the set below, so the check-then-act is safe on the
+    //     single-threaded event loop).
+    const inFlight = inFlightDerivations.get(outputContentPath);
+    if(inFlight !== undefined)
+        return inFlight;
+    const derivation = deriveAndInstall(
+        fns, closure, extension, outputContentId, outputContentPath);
+    inFlightDerivations.set(outputContentPath, derivation);
+    try {
+        return await derivation;
+    } finally {
+        inFlightDerivations.delete(outputContentPath);
+    }
+}
+
+async function deriveAndInstall(fns: {[fnName: string]: Function},
+                                closure: any[],
+                                extension: string,
+                                outputContentId: string,
+                                outputContentPath: string): Promise<string> {
+
     if(!await fs.exists(outputContentPath)) {
 
         // --- Lookup function for closure
