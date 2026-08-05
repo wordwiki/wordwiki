@@ -40,8 +40,10 @@ import * as mikmaqPairing from '../mikmaq/pairing.ts';
 import { machineSyncReportLines as machineSyncLines } from './machine-sync.ts';
 import * as schemaRoles from './schema-roles.ts';
 import * as scannedDocument from './scanned-document.ts';
-import { loadLlm } from '../liminal/llm.ts';
+import { loadLlm, loadAnthropicCredential } from '../liminal/llm.ts';
 import type { ExtractConfig } from '../liminal/extract.ts';
+import { BatchContext, classifyBatchRun } from '../liminal/batch-derivation.ts';
+import { AnthropicBatchBackend } from '../liminal/batch-backend-anthropic.ts';
 import * as workspace from './workspace.ts';
 import { selectAllAssertions, type Assertion } from './assertion.ts';
 import { variantPolicyByTag } from './variant-policy.ts';
@@ -967,8 +969,15 @@ export async function cliMain(args: string[]): Promise<void> {
         // nearly free.
         //   ./wordwiki.sh bind-references Rand rand --cited-book='Rand 1888'
         //                 --printed=1-10 --source-lane=rand [--apply] [--cached-only]
-        //                 [--min-confidence=medium] [--model=...] [--report=bind.md]
+        //                 [--batch] [--min-confidence=medium] [--model=...]
+        //                 [--report=bind.md]
         //                 [--review-html=resources/rand-binder-review.html]
+        // --batch (batch-derivation-design.md; the PILOT retrofit): uncached
+        // pages ENROLL into ONE Message Batch (50% cheaper) instead of
+        // calling the live API; the run submits and exits 3 ("in flight").
+        // RERUN THE SAME COMMAND after the batch ends (<=24h) to land the
+        // results - cached pages are identical either way, and a fully
+        // cached run never batches at all.
         case 'bind-references': {
             const exitCode = await security.runSystem(async () => {
                 ww.ensureNewStyleTables();
@@ -992,6 +1001,10 @@ export async function cliMain(args: string[]): Promise<void> {
                 });
                 const apply = args.includes('--apply');
                 const cachedOnly = args.includes('--cached-only');
+                const batchMode = args.includes('--batch');
+                if(batchMode && cachedOnly)
+                    panic('--batch and --cached-only are opposites: batch EXTENDS coverage, ' +
+                          'cached-only forbids it');
                 const minConfidence = (flag('min-confidence') ?? 'medium') as 'high'|'medium'|'low';
 
                 const llm = loadLlm('wordwiki');
@@ -999,9 +1012,20 @@ export async function cliMain(args: string[]): Promise<void> {
                 // the derived store already holds (no credential needed).
                 if(!llm.available && !cachedOnly)
                     panic('wordwiki-anthropic-credential.json missing/invalid - LLM unavailable');
+                // Batch mode: the SAME closure/key with the batch impl
+                // selected in the fns map (keystone 0) - the context enrolls
+                // misses, one flush below submits them.
+                let batchCtx: BatchContext|undefined;
+                if(batchMode) {
+                    const cred = loadAnthropicCredential('wordwiki');
+                    if(cred instanceof Error)
+                        panic(`--batch needs the credential: ${cred.message}`);
+                    batchCtx = new BatchContext(new AnthropicBatchBackend(cred));
+                }
                 const usage = {inputTokens: 0, outputTokens: 0, calls: 0};
                 const cfg: ExtractConfig = {
                     derivedDir: 'derived', image: referenceBinder.binderImageSource(), llm,
+                    batch: batchCtx,
                     onUsage: (_stage, u) => {
                         usage.inputTokens += u.inputTokens;
                         usage.outputTokens += u.outputTokens; usage.calls++;
@@ -1056,9 +1080,35 @@ export async function cliMain(args: string[]): Promise<void> {
                         worklist.finding(`p.${r.printed_page}: EXTRACTION FAILED (re-run to ` +
                                          `retry; nothing cached): ${r.failed}`);
                 }
+                // BATCH mode: submit this run's frontier as ONE batch (the
+                // single flush at the run barrier) and classify (§8).
+                let batchExit: number|undefined;
+                if(batchCtx !== undefined) {
+                    const submitted = await batchCtx.flush();
+                    const deferredPages = reports.filter(r => r.deferred).length;
+                    const cls = classifyBatchRun({
+                        completed: reports.filter(r => r.deferred !== true
+                                                  && r.failed === undefined).length,
+                        deferred: deferredPages,
+                        submittedBatches: submitted.length,
+                        landed: batchCtx.stats.landed});
+                    step.log(`batch: ${cls}; ${deferredPages} page(s) deferred; ` +
+                             `${submitted.length} batch(es) submitted ` +
+                             `(${batchCtx.stats.enrolled} request(s), ` +
+                             `${batchCtx.stats.landed} landed this run)` +
+                             (batchCtx.blockingBatchIds.size > 0
+                              ? `; waiting on ${[...batchCtx.blockingBatchIds].join(', ')}`
+                              : ''));
+                    if(cls !== 'done') {
+                        step.log(`RERUN this same command after the batch ends (<=24h) ` +
+                                 `to land the results.`);
+                        batchExit = 3;      // in flight - distinct from the worklist's 2
+                    }
+                }
                 step.finish();
-                return reports.some(r => r.unmatched.length > 0 || r.belowThreshold.length > 0
-                                    || r.unclaimed.length > 0 || r.failed !== undefined) ? 2 : 0;
+                return batchExit
+                    ?? (reports.some(r => r.unmatched.length > 0 || r.belowThreshold.length > 0
+                                     || r.unclaimed.length > 0 || r.failed !== undefined) ? 2 : 0);
             });
             Deno.exit(exitCode);
             break;

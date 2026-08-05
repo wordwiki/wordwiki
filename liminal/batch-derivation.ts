@@ -406,6 +406,16 @@ export interface BatchUnitReport {
 
 export type BatchRunClassification = 'done' | 'progress' | 'pure-wait';
 
+/** The §8 classifier, shared by runBatchUnits and passes with their own
+ *  unit loops (the reference binder's page loop). */
+export function classifyBatchRun(args: {completed: number, deferred: number,
+                                        submittedBatches: number, landed: number}):
+        BatchRunClassification {
+    return args.deferred === 0 ? 'done'
+        : (args.completed > 0 || args.submittedBatches > 0 || args.landed > 0) ? 'progress'
+        : 'pure-wait';
+}
+
 export interface BatchRunOutcome {
     units: BatchUnitReport[];
     completed: number;
@@ -450,10 +460,8 @@ export async function runBatchUnits(units: BatchUnit[], batch: BatchContext,
     const completed = reports.filter(r => r.status === 'completed').length;
     const deferred = reports.filter(r => r.status === 'deferred').length;
     const failed = reports.filter(r => r.status === 'failed').length;
-    const classification: BatchRunClassification =
-        deferred === 0 ? 'done'
-        : (completed > 0 || submitted.length > 0 || batch.stats.landed > 0) ? 'progress'
-        : 'pure-wait';
+    const classification = classifyBatchRun(
+        {completed, deferred, submittedBatches: submitted.length, landed: batch.stats.landed});
     log(`batch run: ${completed} completed, ${deferred} deferred, ${failed} failed; ` +
         `${submitted.length} batch(es) submitted ` +
         `(${submitted.reduce((n, b) => n + b.requestCounts.processing, 0)} request(s)); ` +

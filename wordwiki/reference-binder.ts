@@ -45,6 +45,7 @@ import * as entryMeta from './render-entry-meta.ts';
 import { updateBoundingBox, type BoundingBox } from './scanned-document.ts';
 import { asyncRenderToStringViaLinkeDOM } from '../liminal/markup.ts';
 import { extractStage, extractStageCached, type ExtractConfig, type ExtractStage } from '../liminal/extract.ts';
+import { DerivationNotAvailable } from '../liminal/batch-derivation.ts';
 import { containedImageSource } from './transcribe.ts';
 
 export const PROMPT_VERSION_BIND = 3;   // v2: english + source_spelling keys
@@ -479,6 +480,8 @@ export interface PageBindReport {
     failed?: string;                 // the extraction failed (API/validation) -
                                      //   the page is retryable (nothing cached)
     skippedUncached?: boolean;       // cached-only mode: no extraction yet
+    deferred?: boolean;              // batch mode: enrolled, result not landed
+                                     //   yet - rerun when the batch ends
 }
 
 export async function bindPages(ww: WordWiki, opts: BindPagesOptions)
@@ -520,11 +523,20 @@ export async function bindPages(ww: WordWiki, opts: BindPagesOptions)
         // One bad page must not kill a multi-hour run: a failed extraction
         // (transient API error, schema misfire) reports and moves on -
         // nothing caches on failure, so a re-run retries exactly the
-        // failed pages at no extra cost for the rest.
+        // failed pages at no extra cost for the rest.  In BATCH mode a miss
+        // ENROLLS and throws DerivationNotAvailable instead - that page is
+        // DEFERRED (this page loop is the design's top loop over units;
+        // catching here is what lets every other page still enroll into the
+        // same batch), and a rerun after the batch lands completes it.
         let extraction: BinderExtraction|undefined;
         try {
             extraction = await opts.extract(input);
         } catch(e) {
+            if(e instanceof DerivationNotAvailable) {
+                r.deferred = true;
+                reports.push(r);
+                continue;
+            }
             r.failed = e instanceof Error ? e.message : String(e);
             log(`p.${printed}: EXTRACTION FAILED - ${r.failed}`);
             reports.push(r);
@@ -756,6 +768,7 @@ export function bindReportMarkdown(opts: {book: string, dictionary: string,
              ` (${r.candidates} candidates, ${r.boxes} boxes)`));
         if(r.failed) lines.push(`- EXTRACTION FAILED (retryable): ${r.failed}`);
         if(r.skippedUncached) lines.push(`- skipped (no cached extraction - cached-only mode)`);
+        if(r.deferred) lines.push(`- deferred (enrolled in batch - rerun when the batch lands)`);
         for(const b of r.bound)
             lines.push(`- **${b.headword}** (${b.entry_id}):`,
                        ...b.boxTexts.map(t => `    - ${t}`));
