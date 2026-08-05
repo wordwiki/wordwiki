@@ -1,5 +1,10 @@
 # Thread 4 — build the batch AI derivation (design is done)
 
+## STATUS
+- TAKEN 2026-08-05 by claude (dz's main container, session w/ dz live) —
+  building in the §9/FIRST-MOVE order: memoization → fake backend + Tier-1
+  harness → BatchContext/batchImpl → driver → pilot retrofit.
+
 ## What / why
 Route the BULK pipeline AI passes (Phase 3: PDM segment/read/split/
 transliterate, rand binding) through the Anthropic Message Batches API —
