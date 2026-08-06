@@ -30,10 +30,15 @@
   (LIMINAL_NO_LLM=1) full pass served entirely from cache with the err unit
   failing at the cap WITHOUT enrolling.  THE FEATURE IS PRODUCTION-READY.
   Rerun the soak after any change to the batch client/driver/store paths.
-- REMAINING: retrofit the PDM stages (depth-4 - where the depth x 24h bound
-  really pays) the same way as the binder pilot; then the deferred big jobs
-  (full rand binder, full-band judge, full-book PDM) can ride batch at half
-  price - still gated on dz's explicit go + quote (deferred-llm-runs.md).
+- PDM RETROFIT DONE 2026-08-06 (53572b6): `pdm-import --batch` = derivePdm
+  cycles (pure, zero db writes, per-page units, exit 3 in flight) then the
+  UNCHANGED importPdm lands the whole mirror from cache (commit-at-end for
+  the entire import).  cropClosure = the one shared crop key (§12b);
+  boxesCropPath derives crops from raw segmentation rects (no group);
+  readEntryFromCrop = the dual-mode op.  BOTH ban gates passed on the pilot
+  pages: sync relands gen-5 byte-identically; --batch derives all 304
+  readings via the new no-group route with ZERO enrollments against the
+  real paid cache.  ALL bulk passes (binder + pdm) now batch-capable.
 - DUAL-MODE operations (dz 2026-08-06): some ops run BOTH ways - e.g.
   handwriting->text for a PDM entry's bounding boxes is BATCH when
   auto-processing the whole book, SYNC when a user just edited the box.
