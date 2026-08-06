@@ -32,9 +32,10 @@ import * as dictionaryConfig from '../wordwiki/dictionary-config.ts';
 import { contentKeyId } from '../wordwiki/sfm-import.ts';
 import { selectScannedDocumentByFriendlyId, getOrCreateTaggingSheet } from '../wordwiki/scanned-document.ts';
 import { copyRefBoxToNewGroup, copyRefBoxToExistingGroup } from '../wordwiki/render-page-editor.ts';
-import { groupCropPath, groupCropImageSource, pdmRecipe, wordSplitStage, coerceRuns,
-         coerceConfidence } from '../wordwiki/transcribe.ts';
+import { groupCropPath, boxesCropPath, groupCropImageSource, pdmRecipe, wordSplitStage,
+         coerceRuns, coerceConfidence } from '../wordwiki/transcribe.ts';
 import { llmRetry } from '../wordwiki/page-transcribe.ts';
+import { DerivationNotAvailable } from '../liminal/batch-derivation.ts';
 import { pdmPage, clusterRuns, annotatedPagePath, pdmSegmentStage, pdmStartStage,
          spansFromStarts, TUNED_CLUSTER, type Run } from './pdm-segment.ts';
 
@@ -144,7 +145,10 @@ async function segmentPage(cfg: ExtractConfig, pageNo: number):
                 .filter((i: number) => runs[i] !== undefined)}))
             .filter((e: SegmentedEntry) => e.runIds.length > 0);
         return {runs, entries, fallback: false};
-    } catch(_e) {
+    } catch(e) {
+        // Batch mode: an ENROLLED (not-ready) grouping is not malformed -
+        // it must defer the page, never trigger the PAID starts-fallback.
+        if(e instanceof DerivationNotAvailable) throw e;
         // Malformed grouping response after retries: the robust
         // starts+bands fallback (v3).
         const out: any = await llmRetry(() =>
@@ -209,7 +213,19 @@ function recipeWithModels(letter: string, structuring: string): ExtractStage[] {
 
 export async function readEntry(cfg: ExtractConfig, bounding_group_id: number):
         Promise<EntryReading> {
-    const crop = await groupCropPath(bounding_group_id);
+    return readEntryFromCrop(cfg, await groupCropPath(bounding_group_id));
+}
+
+/** The reading over a CROP PATH - the DUAL-MODE op (dz 2026-08-06): the
+ *  bulk derive phase calls it with cfg.batch (misses enroll + defer) on
+ *  crops computed straight from segmentation boxes; interactive
+ *  re-derivation after a user edits a box calls it sync via readEntry.
+ *  Identical closures either way (the crop path is content-addressed by
+ *  geometry, groups copy geometry verbatim), so each mode serves the
+ *  other's cache.  PURE up to its awaits - no side effects, so a batch
+ *  unwind mid-chain is safe (§6). */
+export async function readEntryFromCrop(cfg: ExtractConfig, crop: string):
+        Promise<EntryReading> {
     let chain = await runChain(cfg, crop, recipeWithModels(LETTER_MODEL, STRONG_MODEL));
     let escalated = false;
     if((chain['transcribe']?.confidence ?? 0) < ESCALATE_BELOW) {
@@ -233,8 +249,87 @@ export async function readEntry(cfg: ExtractConfig, bounding_group_id: number):
                                gloss: String(w?.gloss ?? '').trim(),
                                confidence: coerceConfidence(w)}))
             .filter((w: WordFact) => w.source !== '' || w.normalized !== '');
-    } catch(_e) { /* fall back to the single-entry landing */ }
+    } catch(e) {
+        // An ENROLLED word-split must defer the entry, not silently land
+        // the single-entry fallback (which would then be wrong forever).
+        if(e instanceof DerivationNotAvailable) throw e;
+        /* otherwise fall back to the single-entry landing */
+    }
     return {rungs, words, escalated};
+}
+
+// ---------------------------------------------------------------------------------
+// --- The DERIVE phase (the batched import's pure pass) -----------------------------
+// ---------------------------------------------------------------------------------
+
+export interface PdmPageDerivation {
+    pageNo: number;
+    status: 'complete' | 'deferred' | 'failed';
+    entries: number;                 // segmented visual entries
+    read: number;                    // readings fully derived (incl. escalation + split)
+    deferredReads: number;
+    failedReads: number;
+    error?: string;                  // page-level (segmentation) failure
+}
+
+/** PHASE A of the batched import: derive EVERYTHING (segmentation +
+ *  readings) for the pages with ZERO db writes - the throw-tolerant pure
+ *  pass of the batch design (per-page units, enroll on miss, defer on
+ *  DerivationNotAvailable).  Crops are computed from the segmentation
+ *  output's Text-layer boxes via boxesCropPath - the SAME keys importPdm
+ *  later reaches through the copied groups (geometry copies verbatim;
+ *  cropClosure is the one shared key computation), so once every page is
+ *  'complete', importPdm lands the whole mirror as pure cache hits -
+ *  commit-at-end for the entire import.  Runs sync too (no cfg.batch:
+ *  each miss just computes now). */
+export async function derivePdm(cfg: ExtractConfig, pages: number[],
+                                log: (m: string) => void = m => console.info(m)):
+        Promise<PdmPageDerivation[]> {
+    const out: PdmPageDerivation[] = [];
+    for(const pageNo of pages) {
+        const r: PdmPageDerivation = {pageNo, status: 'complete', entries: 0,
+                                      read: 0, deferredReads: 0, failedReads: 0};
+        out.push(r);
+        let seg;
+        try {
+            seg = await segmentPage(cfg, pageNo);
+        } catch(e) {
+            if(e instanceof DerivationNotAvailable) { r.status = 'deferred'; continue; }
+            r.status = 'failed';
+            r.error = e instanceof Error ? e.message.slice(0, 120) : String(e);
+            continue;
+        }
+        r.entries = seg.entries.length;
+        const page = pdmPage(pageNo);
+        // Same box selection AND order as the landing loop's groups (the
+        // rects array is part of the crop key, so order is identity).
+        const entryBoxes = seg.entries
+            .map(e => e.runIds.flatMap(ri => seg.runs[ri].words))
+            .filter(boxes => boxes.length > 0);
+        // The landing loop's 4-reader pool shape; every entry advances its
+        // own frontier each cycle regardless of its siblings' state.
+        let cursor = 0;
+        await Promise.all(Array.from({length: 4}, async () => {
+            for(;;) {
+                const i = cursor++;
+                if(i >= entryBoxes.length) break;
+                try {
+                    await readEntryFromCrop(cfg,
+                        await boxesCropPath(page.page_id, entryBoxes[i]));
+                    r.read++;
+                } catch(e) {
+                    if(e instanceof DerivationNotAvailable) r.deferredReads++;
+                    else r.failedReads++;
+                }
+            }
+        }));
+        if(r.deferredReads > 0) r.status = 'deferred';
+        log(`p${pageNo}: ${r.status} - ${r.read}/${r.entries} read` +
+            (r.deferredReads ? `, ${r.deferredReads} deferred` : '') +
+            (r.failedReads ? `, ${r.failedReads} read-failed` : '') +
+            (r.error ? ` (${r.error})` : ''));
+    }
+    return out;
 }
 
 // ---------------------------------------------------------------------------------

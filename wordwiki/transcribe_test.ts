@@ -5,7 +5,29 @@
  */
 import { test } from "../liminal/testing/test.ts";
 import { assert, assertEquals } from "../liminal/testing/assert.ts";
-import { ambiguityCandidates, similarity } from "./transcribe.ts";
+import { ambiguityCandidates, similarity, cropClosure } from "./transcribe.ts";
+
+// cropClosure is THE crop cache key (batch-derivation §12b: one shared
+// computation for the DB-group path and the PDM derive-from-boxes path).
+// This pins the HISTORICAL closure shape byte-for-byte - a change here
+// orphans every paid group-crop-keyed extraction in the store.
+test("cropClosure: the historical key shape, order-sensitive, geometry-sensitive", () => {
+    const page = {image_ref: 'content/pdm/ab/abc.jpg', width: 2000, height: 3000};
+    const boxes = [{x: 100, y: 200, w: 300, h: 40}, {x: 120, y: 260, w: 280, h: 38}];
+    // The exact shape groupCropPath has always produced: margins 12 (union)
+    // and 16 (per box), crop-relative clamped rects.
+    assertEquals(cropClosure(page, boxes),
+                 ['groupCropCmd', 'content/pdm/ab/abc.jpg', 88, 188, 324, 122,
+                  [{x1: 0, y1: 0, x2: 324, y2: 68},
+                   {x1: 16, y1: 56, x2: 324, y2: 122}]]);
+    // Same rects, different order = a DIFFERENT key (rects ride the closure
+    // as an array; both call sites must build them in the same order).
+    assert(JSON.stringify(cropClosure(page, boxes)) !==
+           JSON.stringify(cropClosure(page, [boxes[1], boxes[0]])));
+    // Geometry moves the key (boxes move => re-extract).
+    assert(JSON.stringify(cropClosure(page, boxes)) !==
+           JSON.stringify(cropClosure(page, [{...boxes[0], x: 101}, boxes[1]])));
+});
 
 test("ambiguityCandidates: expands [a|b] markers, cartesian", () => {
     assertEquals(ambiguityCandidates('abc'), ['abc']);

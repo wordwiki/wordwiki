@@ -44,6 +44,46 @@ import { selectBoundingBoxesForGroup, selectScannedPage } from './scanned-docume
 
 const CROP_MARGIN = 12;
 
+export interface CropRect { x: number; y: number; w: number; h: number; }
+
+/** THE closure/key computation for a masked group crop, in ONE place: the
+ *  DB-group path (groupCropPath) and the PDM batch derive phase
+ *  (boxesCropPath - segmentation output, no group created yet) both call
+ *  this verbatim, so the two paths CANNOT drift and the landing run is a
+ *  pure cache hit on what the derive run keyed
+ *  (batch-derivation-design.md §12b - boxes are copied into groups with
+ *  their geometry preserved, so rect-identity is key-identity). */
+export function cropClosure(page: {image_ref: string, width: number, height: number},
+                            pageBoxes: CropRect[]): unknown[] {
+    const x = Math.max(0, Math.min(...pageBoxes.map(b=>b.x)) - CROP_MARGIN);
+    const y = Math.max(0, Math.min(...pageBoxes.map(b=>b.y)) - CROP_MARGIN);
+    const right = Math.min(page.width, Math.max(...pageBoxes.map(b=>b.x+b.w)) + CROP_MARGIN);
+    const bottom = Math.min(page.height, Math.max(...pageBoxes.map(b=>b.y+b.h)) + CROP_MARGIN);
+    const w = Math.max(1, Math.round(right - x)), h = Math.max(1, Math.round(bottom - y));
+    // Box rects RELATIVE to the union crop, each with a small keep-margin
+    // (letter edges must not clip), clamped to the crop.
+    // Generous: 6px clipped descenders (the eval lost a 'j' to it).
+    const BOX_MARGIN = 16;
+    const rects = pageBoxes.map(b => ({
+        x1: Math.max(0, Math.round(b.x - x - BOX_MARGIN)),
+        y1: Math.max(0, Math.round(b.y - y - BOX_MARGIN)),
+        x2: Math.min(w, Math.round(b.x - x + b.w + BOX_MARGIN)),
+        y2: Math.min(h, Math.round(b.y - y + b.h + BOX_MARGIN)),
+    }));
+    return ['groupCropCmd', page.image_ref, Math.round(x), Math.round(y), w, h, rects];
+}
+
+/** The masked crop for a page + explicit box RECTS - no bounding group
+ *  needed.  The PDM derive phase uses this straight off the segmentation
+ *  output, before any group exists. */
+export async function boxesCropPath(page_id: number, boxes: CropRect[]): Promise<string> {
+    if(boxes.length === 0)
+        throw new Error(`boxesCropPath: no boxes for page ${page_id}`);
+    const page = selectScannedPage().required({page_id});
+    return 'derived/' + await content.getDerived(
+        'derived/group-crops', {groupCropCmd}, cropClosure(page, boxes), 'jpg');
+}
+
 /** The derived, MASKED crop of a bounding group: the union rectangle of the
  *  group's boxes (+margin) with everything OUTSIDE the boxes whited out -
  *  the model sees exactly the group's ink (dz's original spec: 'only the
@@ -62,26 +102,7 @@ export async function groupCropPath(bounding_group_id: number): Promise<string> 
     // Single-page groups are the norm; a multi-page group crops its first
     // page's boxes (same first-page pick as the URL helpers).
     const page_id = boxes.map(b=>b.page_id).toSorted((a,b)=>a-b)[0];
-    const pageBoxes = boxes.filter(b=>b.page_id === page_id);
-    const page = selectScannedPage().required({page_id});
-    const x = Math.max(0, Math.min(...pageBoxes.map(b=>b.x)) - CROP_MARGIN);
-    const y = Math.max(0, Math.min(...pageBoxes.map(b=>b.y)) - CROP_MARGIN);
-    const right = Math.min(page.width, Math.max(...pageBoxes.map(b=>b.x+b.w)) + CROP_MARGIN);
-    const bottom = Math.min(page.height, Math.max(...pageBoxes.map(b=>b.y+b.h)) + CROP_MARGIN);
-    const w = Math.max(1, Math.round(right - x)), h = Math.max(1, Math.round(bottom - y));
-    // Box rects RELATIVE to the union crop, each with a small keep-margin
-    // (letter edges must not clip), clamped to the crop.
-    // Generous: 6px clipped descenders (the eval lost a 'j' to it).
-    const BOX_MARGIN = 16;
-    const rects = pageBoxes.map(b => ({
-        x1: Math.max(0, Math.round(b.x - x - BOX_MARGIN)),
-        y1: Math.max(0, Math.round(b.y - y - BOX_MARGIN)),
-        x2: Math.min(w, Math.round(b.x - x + b.w + BOX_MARGIN)),
-        y2: Math.min(h, Math.round(b.y - y + b.h + BOX_MARGIN)),
-    }));
-    return 'derived/' + await content.getDerived(
-        'derived/group-crops', {groupCropCmd},
-        ['groupCropCmd', page.image_ref, Math.round(x), Math.round(y), w, h, rects], 'jpg');
+    return boxesCropPath(page_id, boxes.filter(b=>b.page_id === page_id));
 }
 
 async function groupCropCmd(targetResultPath: string, sourceImagePath: string,

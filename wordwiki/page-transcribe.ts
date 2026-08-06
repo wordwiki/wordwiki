@@ -24,6 +24,7 @@ import * as content from "../liminal/content-store.ts";
 import * as utils_config from "../liminal/utils-config.ts";
 import { loadLlm, LlmUsage } from "../liminal/llm.ts";
 import { extractStage, extractTextStage, ExtractConfig, ExtractStage } from "../liminal/extract.ts";
+import { DerivationNotAvailable } from "../liminal/batch-derivation.ts";
 import { levenshteinDistance } from "../liminal/levenshtein-distance.ts";
 import { containedImageSource } from './transcribe.ts';
 
@@ -315,6 +316,9 @@ export async function llmRetry<T>(fn: () => Promise<T>): Promise<T> {
     for(let attempt = 0; ; attempt++) {
         try { return await fn(); }
         catch(e) {
+            // Batch mode's "enrolled, not ready" is CONTROL FLOW, not a
+            // failure - it must reach the pass's top loop untouched.
+            if(e instanceof DerivationNotAvailable) throw e;
             const msg = e instanceof Error ? e.message : String(e);
             // Schema mismatches are retryable too: an occasional response
             // drops a required field, and a fresh call (nothing invalid is

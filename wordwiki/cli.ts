@@ -1571,7 +1571,15 @@ export async function cliMain(args: string[]): Promise<void> {
         // PDM IMPORT (mikmaq/pdm-import.ts): segment + read + land the
         // Pacifique draft dictionary (Clark landing pattern; escalation
         // policy per the measured arms).  Cached; re-runs cheap.
-        //   ./wordwiki.sh pdm-import [--pages=...] [--report=../pdm/import.md]
+        //   ./wordwiki.sh pdm-import [--pages=...] [--report=../pdm/import.md] [--batch]
+        // --batch (batch-derivation-design.md): the DERIVE phase runs with
+        // misses enrolled into ONE Message Batch per cycle (50% cheaper;
+        // the PDM chain is ~depth 5-11, so expect that many cycles for
+        // fresh pages).  While work is in flight the run exits 3 - RERUN
+        // THE SAME COMMAND after the batch ends.  Once every page derives
+        // 'complete', the SAME invocation falls through to importPdm, which
+        // lands the whole mirror from pure cache hits (commit-at-end: the
+        // wipe+rebuild only ever happens with all AI work in hand).
         case 'pdm-import': {
             const argOf = (name: string, dflt: string) =>
                 args.find(a => a.startsWith(`--${name}=`))?.slice(name.length + 3) ?? dflt;
@@ -1582,11 +1590,43 @@ export async function cliMain(args: string[]): Promise<void> {
                              (_, i) => Number(range[1]) + i)
                 : pagesArg.split(',').map(Number);
             const reportPath = argOf('report', '../pdm/import.md');
-            await security.runSystem(async () => {
+            const batchMode = args.includes('--batch');
+            const exitCode = await security.runSystem(async () => {
                 ww.ensureNewStyleTables();
+                if(batchMode) {
+                    const cred = loadAnthropicCredential('wordwiki');
+                    if(cred instanceof Error)
+                        panic(`--batch needs the credential: ${cred.message}`);
+                    const batchCtx = new BatchContext(new AnthropicBatchBackend(cred));
+                    const cfg: ExtractConfig = {
+                        derivedDir: 'derived',
+                        image: transcribe.groupCropImageSource,
+                        llm: loadLlm('wordwiki'), batch: batchCtx,
+                    };
+                    const derived = await pdmImport.derivePdm(cfg, pages);
+                    const submitted = await batchCtx.flush();
+                    const deferred = derived.filter(d => d.status === 'deferred').length;
+                    const cls = classifyBatchRun({
+                        completed: derived.filter(d => d.status === 'complete').length,
+                        deferred,
+                        submittedBatches: submitted.length,
+                        landed: batchCtx.stats.landed});
+                    console.info(`pdm derive: ${cls}; ${deferred} page(s) deferred; ` +
+                                 `${submitted.length} batch(es) submitted ` +
+                                 `(${batchCtx.stats.enrolled} request(s), ` +
+                                 `${batchCtx.stats.landed} landed this run)`);
+                    if(cls !== 'done') {
+                        console.info(`RERUN this same command after the batch ends ` +
+                                     `to continue (the chain is several levels deep - ` +
+                                     `expect multiple cycles).`);
+                        return 3;
+                    }
+                    console.info(`pdm derive complete - landing the mirror (pure cache)`);
+                }
                 await pdmImport.importPdm({pages, reportPath});
+                return 0;
             });
-            Deno.exit(0);
+            Deno.exit(exitCode);
             break;
         }
 
