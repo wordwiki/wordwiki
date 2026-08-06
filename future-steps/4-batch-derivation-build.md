@@ -34,6 +34,18 @@
   really pays) the same way as the binder pilot; then the deferred big jobs
   (full rand binder, full-band judge, full-book PDM) can ride batch at half
   price - still gated on dz's explicit go + quote (deferred-llm-runs.md).
+- DUAL-MODE operations (dz 2026-08-06): some ops run BOTH ways - e.g.
+  handwriting->text for a PDM entry's bounding boxes is BATCH when
+  auto-processing the whole book, SYNC when a user just edited the box.
+  The architecture already carries this (keystone 0 + no ambient mode):
+  write the op ONCE taking an ExtractConfig; the bulk driver passes
+  cfg.batch, the interactive handler doesn't, and the shared key means the
+  two modes serve each other's cache (a user-fixed box is a free hit for
+  the book sweep, and vice versa - Tier-1 tests this both ways).  The ONE
+  discipline the retrofit must hold for dual-use ops: the shared function
+  is PURE up to its await (no side effects before the result), because in
+  batch mode it unwinds there with DerivationNotAvailable; sync mode never
+  throws it, so interactive callers need no catch.
 
 ## What / why
 Route the BULK pipeline AI passes (Phase 3: PDM segment/read/split/
