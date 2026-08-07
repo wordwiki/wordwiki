@@ -33,22 +33,28 @@ re-derivation when the time comes.
   future '~xref' landing) is a small pairing extension that must exist
   before the judgments turn into facts.
 
-### 2. Full rand image binding (Opus)
+### 2. Full rand image binding (Opus) - DONE 2026-08-07
 
     ./wordwiki.sh bind-references Rand rand --cited-book='Rand 1888' \
-        --printed=1-286 --source-lane=rand --apply
+        --printed=81-286 --source-lane=rand --apply --batch
 
-  (WITHOUT --cached-only - that flag is the migration's no-spend mode.)
-
-- Scope: resume the run dz paused at printed page 75; 8,462
-  '~rand-binder' refs already landed from the cached pages.
+- STATUS: COMPLETE.  Ran pages 81-286 via the batch path (dz go
+  2026-08-07); 5-page probe 76-80 first as the live quote.  The store now
+  holds **~30,075 '~rand-binder' refs across 279 pages** (was 8,462 on
+  1-75).  Everything cached; the migration's --cached-only step reproduces
+  it at zero spend.
+- ACTUAL SPEND: batch msgbatch_018dJ8kwYn7GRTxaj19x8zfS - 206 requests,
+  4.03M in / 0.87M out => **$62.86 batched** (would have been $125.71
+  sync).  + probe ~$1.71 + p.95 sync recovery $0.54 = **~$65 total**.
+  Matched the ~$65-75 quote.
 - Model: Opus (prompt v3).  Sonnet REJECTED for this task (4/20 page
   failures, dropped bindings in the A/B).
-- Cost: re-quote before running - bind a small fresh range (e.g.
-  `--printed=76-80` without --apply) and read the usage line; page cost
-  depends on crop count and has drifted with prompt v3.
-- Already banked: pages 1-75 fully cached; the migration's --cached-only
-  step reproduces today's state from them at zero spend.
+- One page (p.95) failed our schema validation on the batch result (model
+  returned bindings as a string); recovered with a sync re-run (96/96
+  bound).  A per-run worklist (unmatched / low-confidence / unclaimed
+  regions) is in the batch's --report for spot-checking.
+- If ever extended: the same command over a wider --printed range; fresh
+  pages re-quote via a small dry-run.
 
 ## What invalidates the caches (why we wait)
 
